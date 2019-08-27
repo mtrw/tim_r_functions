@@ -148,8 +148,8 @@ random_draws_from_any_discreet_distribution <- function(n=1,events,relative_prob
 
 #n random (non-repeated!) rows of a data frame
 #sample_df(iris,20)
-sample_df <- function(df,n=10){
-  df[ sample.int(nrow(df),n) , ]
+sample_df <- function(df,n=10,...){
+  df[ sample.int(nrow(df),n,...) ]
 }
 
 p <- function(x){
@@ -199,7 +199,7 @@ sigmoid <- function(x,L=1,k=1,xo=0){
 }
 #sigmoid(-10:10)
 
-interpolate <- function( x , y , points_x=NULL , points_y=NULL , plot=TRUE ){
+interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
   if((is.null(points_x) & is.null(points_y)) | ((!is.null(points_y) & !is.null(points_x)) )){
     stop("Must enter one of points_x and points_y, not both.")
   }
@@ -284,3 +284,34 @@ number_runs <- function(vec){
 }
 #number_runs( c(5,5,5,NA,1,1,"a","a","b",1,1,1,1,FALSE,TRUE,TRUE) )
 
+#top left
+tl <- function(dt,n=10){
+  dt[1:n,1:n]
+}
+iris %>% tl(3)
+
+#top right
+tr <- function(dt,n=10){
+  dt[1:n,(ncol(dt)-n):ncol(dt)]
+}
+iris %>% tr(3)
+
+u <- function(...){
+  unique(...)
+}
+
+`%prop_in%` <- function(a,b){
+  ce("Prop(A in B): " , sum( a %in% b ) / length(a))
+  ce("Prop(B in A): " , sum( b %in% a ) / length(b))
+}
+#1:10 %prop_in% 5:15
+
+#a simple ggplot theme
+reduced_l <- theme(
+  axis.line = element_line(colour = "black"),
+  
+  panel.grid.major = element_line(size=.1 , colour = "grey"),
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect( fill = "transparent", colour = "black"),
+  strip.background = element_rect(fill = "transparent", colour = "black"),
+)
