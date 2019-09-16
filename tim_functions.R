@@ -6,6 +6,11 @@ library(plyr)
 library(parallel)
 library(devtools)
 
+#random integers
+rint <- function(n,from,to,replace=T){
+  sample.int(abs(to-from)+1,n,replace=replace) + from - 1L
+}
+
 #apply a fun of two vars in every combo, and give the results as a matrix
 #grid_ply(1:2,3:1,sum)
 grid_ply <- function(rows,cols,FUN) {
