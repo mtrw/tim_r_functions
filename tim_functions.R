@@ -7,9 +7,11 @@ library(parallel)
 
 #display brewer palletes and remind yourself how to use them
 cb <- function(){
-  library(RColorBrewer)
-  display.brewer.all(colorblindFriendly = TRUE)
-  ce("Example: brewer.pal(11,\"RdYlBu\")")
+  library(colorspace)
+  hcl_palettes(plot = TRUE)
+  ce("Example: diverge_hcl(30,palette=\"Berlin\")")
+  ce("demoplot(x, type = c(\"map\", \"heatmap\", \"scatter\", \"spine\", \"bar\", \"pie\",
+\"perspective\", \"mosaic\", \"lines\"), ...)")
 }
 
 #random integers
