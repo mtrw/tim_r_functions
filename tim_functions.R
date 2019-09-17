@@ -1,10 +1,16 @@
+library(plyr)
+library(dplyr)
 library(magrittr)
 library(data.table)
 library(ggplot2)
-library(plyr)
-library(dplyr)
 library(parallel)
-library(devtools)
+
+#display brewer palletes and remind yourself how to use them
+cb <- function(){
+  library(RColorBrewer)
+  display.brewer.all(colorblindFriendly = TRUE)
+  ce("Example: brewer.pal(11,\"RdYlBu\")")
+}
 
 #random integers
 rint <- function(n,from,to,replace=T){
