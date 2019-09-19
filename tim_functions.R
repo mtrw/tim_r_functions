@@ -6,7 +6,7 @@ library(ggplot2)
 library(parallel)
 
 #display brewer palletes and remind yourself how to use them
-cb <- function(){
+cs <- function(){
   library(colorspace)
   hcl_palettes(plot = TRUE)
   ce("Example: diverge_hcl(30,palette=\"Berlin\")")
