@@ -6,12 +6,6 @@ library(ggplot2)
 library(parallel)
 
 
-
-ex <- data.table(
-  pos={ patches <- runif(50)*1e9; rnorm(1e6,rep(patches,each=1e6/50),rep(runif(50,1e5,1e8),each=1e6/50)) },
-  chr=rep(c(1L,2L),each=0.5e6)
-)
-
 mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,return_bins_dt=FALSE,plot=TRUE,min_sd=NULL,min_abs=NULL,...){
   if(is.null(bandwidth)){bandwidth <- "nrd0"}
   if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
@@ -39,9 +33,12 @@ mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,r
   dtf <- data.table(filter=filter,vec=d$x)
   dtf[dtv,on=.(vec),roll=T]
 }
-mark_low_density(vec=ex[chr==1]$pos,bandwidth=NULL,min_sd=0,n_bins=45,min_run_length=12,return_bins_dt=FALSE)
-
-ex[ , mark_low_density(pos,min_sd=-.2) , by=.(chr)]
+# ex <- data.table(
+#   pos={ patches <- runif(50)*1e9; rnorm(1e6,rep(patches,each=1e6/50),rep(runif(50,1e5,1e8),each=1e6/50)) },
+#   chr=rep(c(1L,2L),each=0.5e6)
+# )
+# mark_low_density(vec=ex[chr==1]$pos,bandwidth=NULL,min_sd=0,n_bins=45,min_run_length=12,return_bins_dt=FALSE)
+# ex[ , mark_low_density(pos,min_sd=-.2) , by=.(chr)]
 
 
 #n stats for genomes
