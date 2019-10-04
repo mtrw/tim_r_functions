@@ -5,6 +5,56 @@ library(data.table)
 library(ggplot2)
 library(parallel)
 
+
+
+ex <- data.table(
+  pos={ patches <- runif(50)*1e9; rnorm(1e6,rep(patches,each=1e6/50),rep(runif(50,1e5,1e8),each=1e6/50)) },
+  chr=rep(c(1L,2L),each=0.5e6)
+)
+
+mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,return_bins_dt=FALSE,plot=TRUE,min_sd=NULL,min_abs=NULL,...){
+  if(is.null(bandwidth)){bandwidth <- "nrd0"}
+  if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
+  binsize <- diff(range(vec))/n_bins
+  d <- density(vec,bw=bandwidth,n=n_bins+2,from=min(vec)-binsize,to=max(vec)+binsize,...)
+  if(!is.null(min_sd)){min <- mean(d$y)-(sd(d$y)*min_sd)}
+  if(plot){
+    plot(d$x,d$y,type="l")
+    abline(h = min)
+  }
+  
+  filter <- d$y<min #TRUE mean it's too low and should be filtered
+  if(!is.null(min_run_length)){
+    r <- rle(filter)
+    r$values[r$values==TRUE & r$lengths<min_run_length] <- FALSE
+    filter <- inverse.rle(r)
+  }
+  if(return_bins_dt){
+    return(data.table(
+      x=d$x,
+      include=filter
+    ))
+  }
+  dtv <- data.table(vec=vec)
+  dtf <- data.table(filter=filter,vec=d$x)
+  dtf[dtv,on=.(vec),roll=T]
+}
+mark_low_density(vec=ex[chr==1]$pos,bandwidth=NULL,min_sd=0,n_bins=45,min_run_length=12,return_bins_dt=FALSE)
+
+ex[ , mark_low_density(pos,min_sd=-.2) , by=.(chr)]
+
+
+#n stats for genomes
+Nstat <- function(x,n=50L){
+  x <- as.numeric(x[order(x)])
+  x[cumsum(x) > (sum(x) * (100-n)/100)][1]
+}
+
+#work it out an annotate it
+pgrep <- function(search,in_me){
+  sapply(search,function(x) in_me[grep(x,in_me)[1]] )
+}
+
 #display brewer palletes and remind yourself how to use them
 cs <- function(){
   library(colorspace)
@@ -76,7 +126,7 @@ upper_tri <- function(mat,diag=F){
   mat[upper.tri(mat,diag=diag)]
 }
 
-#paralle mean of two numbers. Great for BLAST search (midpoint of hits = pmean(start_vec,end_vec))
+#parallel mean of two numbers. Great for BLAST search (midpoint of hits = pmean(start_vec,end_vec))
 #pmean(1:5,2:6,5:1)
 pmean <- function(...){
   invecs <- list(...)
