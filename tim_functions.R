@@ -4,7 +4,11 @@ library(magrittr)
 library(data.table)
 library(ggplot2)
 library(parallel)
+library(Rcpp)
 
+null_plot <- function(x,y){ #move to tim functions
+  plot(NULL,xlim=range(x),ylim=range(y))
+}
 
 mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,return_bins_dt=FALSE,plot=TRUE,min_sd=NULL,min_abs=NULL,...){
   if(is.null(bandwidth)){bandwidth <- "nrd0"}
