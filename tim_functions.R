@@ -6,8 +6,12 @@ library(ggplot2)
 library(parallel)
 library(Rcpp)
 
-null_plot <- function(x,y){ #move to tim functions
-  plot(NULL,xlim=range(x),ylim=range(y))
+#just to make the Rcpp compiler use the right C standard.
+Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
+
+#create an empty plot with ranges x=c(low,high) and y=ditto
+null_plot <- function(x,y,...){
+  plot(NULL,xlim=range(x),ylim=range(y),...)
 }
 
 mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,return_bins_dt=FALSE,plot=TRUE,min_sd=NULL,min_abs=NULL,...){
@@ -91,6 +95,7 @@ mc_grid_ply <- function(rows,cols,FUN,cores=25,...) {
 #scale a list of values to between two points, proportionally spaced as they were originally
 #rnorm(100) %>% scale_between(20,29) %>% pd
 scale_between <- function(x,lower,upper){
+  if(all(x==0)) return(x)
   ( x - min(x) ) / (max(x)-min(x)) * (upper-lower) + lower
 }
 
