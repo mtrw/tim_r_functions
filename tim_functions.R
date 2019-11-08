@@ -5,6 +5,7 @@ library(data.table)
 library(ggplot2)
 library(parallel)
 library(Rcpp)
+library(colorspace)
 
 #just to make the Rcpp compiler use the right C standard.
 Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
@@ -172,15 +173,16 @@ read_blastn_basic <- function(fname){
 
 #length, because why spend your life typing "ength" all the time?
 l <- function(x){
+  warning("Naughty length shortcut used, please replace with call to `length`() ...")
   length(x)
 }
 
 #simultaneously change the names of things to a particular thing if they match a particular string.
 #name_by_match(vec=iris$Species,matches = c("set","sicol"),names = c("SETOSA","VERSICOLOR"))
 name_by_match <- function(vec,matches,names){
-  if(l(matches) != l(names)) { stop("Lengths of `matches` and `names` vectors don't match, you massive knob!")  }
+  if(length(matches) != length(names)) { stop("Lengths of `matches` and `names` vectors don't match, you massive knob!")  }
   vec %<>% as.character()
-  l_ply(1:l(matches) , function(n){
+  l_ply(1:length(matches) , function(n){
     vec[grep(matches[n],vec)] <<- names[n]
   })
   vec
@@ -192,10 +194,10 @@ name_by_match <- function(vec,matches,names){
 swap <- function(vec,matches,names,na.replacement=NA){
   orig_vec <- vec
   #if(sum(! matches %in% names ) > 0 ) { stop("Couldn't find all matches in names") }
-  if(l(matches) != l(names)) { stop("Lengths of `matches` and `names` vectors don't match, you old bison!") }
+  if(length(matches) != length(names)) { stop("Lengths of `matches` and `names` vectors don't match, you old bison!") }
   if(is.factor(vec)) { levels(vec) <- c(levels(vec),names,na.replacement) }
   vec[is.na(orig_vec)] <- na.replacement
-  l_ply( 1:l(matches) , function(n){
+  l_ply( 1:length(matches) , function(n){
     vec[orig_vec==matches[n]] <<- names[n]
   })
   vec
@@ -281,14 +283,14 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
     rm(points_y)
   }
   
-  len <- l(x)
-  if(len!=l(y) | len<2){
+  len <- length(x)
+  if(len!=length(y) | len<2){
     stop("x and y must be equal lengths of at least 2.")
   }
   
   o_x <- order(x)
   o_y <- order(y)
-  if((l(o_x != o_y))<0){
+  if((length(o_x != o_y))<0){
     stop("x and y must be monotonic.")
   }
   x <- x[o_x]
@@ -296,9 +298,9 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
   
   out <- lapply(points_x,function(pt_x){
     #it hits an exact point
-    if(l(xeq <- which(x==pt_x))==1){
+    if(length(xeq <- which(x==pt_x))==1){
       y[xeq]
-    } else if(l(xeq)>1) {
+    } else if(length(xeq)>1) {
       warning("WARNING: Falls within run of identical x-values. Estimating by mean(y).")
       mean(y[xeq])
     } else if(pt_x>max(x)){
@@ -342,11 +344,11 @@ number_runs <- function(vec){
   o <- 1
   n <- 1
   l <- x[1]
-  for(i in x[2:l(x)]){
+  for(i in x[2:length(x)]){
     if( i!=l ){
       n <- n + 1
     }
-    o <- append(o,n,l(o))
+    o <- append(o,n,length(o))
     l <- i
   }
   o
@@ -384,3 +386,44 @@ reduced_l <- theme(
   panel.background = element_rect( fill = "transparent", colour = "black"),
   strip.background = element_rect(fill = "transparent", colour = "black"),
 )
+
+#violin plots in base. could use tweaking to make various things controllable.
+violin_plot <- function(x,y){
+  data <- data.table(
+    data_x=x,
+    data_y=y
+  )
+  #calculte densities for violin plot
+  violin_data <- data[ , .(density=.(density(data_y))) , by=.(data_x) ]
+  
+  #calculate how wide to plot violins
+  violin_width <- data[ order(data_x) , {s <- data_x %>% unique %>% diff %>% summary; s[[4]]*0.4} , ]
+  
+  #set up plot
+  plot(NULL,xlim=range(data$data_x),ylim=range(data$data_y),xlab=NA,ylab=NA)
+  
+  #plot mean as a line
+  data[ , .(mean_y = mean(data_y)) , by=.(data_x) ][, lines(data_x,mean_y) ]
+  
+  
+  #plot points and violins
+  lapply( unique(data$data_x) , function(x) {
+    #points
+    with( data[data_x==x] , points(data_x,data_y,pch=20,cex=.2) )
+    #violin
+    d <- violin_data[data_x==x]$density[[1]]
+    scale_by <- violin_width/max(d$y)
+    lines(x+d$y*scale_by,d$x,cex=.2)
+    lines(x-d$y*scale_by,d$x,cex=.2)
+  })
+}
+
+#make some fake data and look at it
+# n_y_each_x <- sample(20:50,10,r=T)
+# p <- data.table(
+#   data_x=(rep(1:10,n_y_each_x) -> t),
+#   data_y=rnorm(length(t),t**2,t)
+# )
+# rm(t)
+# 
+# violin_plot(p$data_x,p$data_y)
