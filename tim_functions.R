@@ -10,6 +10,9 @@ library(colorspace)
 #just to make the Rcpp compiler use the right C standard.
 Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
 
+#be tolerant of non-utf-8 characters when grepping
+Sys.setlocale('LC_ALL','C')
+
 #create an empty plot with ranges x=c(low,high) and y=ditto
 null_plot <- function(x,y,...){
   plot(NULL,xlim=range(x),ylim=range(y),...)
