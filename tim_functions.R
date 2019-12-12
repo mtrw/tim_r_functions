@@ -7,6 +7,10 @@ library(parallel)
 library(Rcpp)
 library(colorspace)
 
+
+#I hate those empty dots base plot defaults to
+par(pch=20)
+
 #just to make the Rcpp compiler use the right C standard.
 Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
 
@@ -18,6 +22,14 @@ null_plot <- function(x,y,...){
   plot(NULL,xlim=range(x),ylim=range(y),...)
 }
 
+#turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
+replace_levels_with_colours <- function(x,palette="Berlin",alpha=1){
+  require(colorspace)
+  n <- nu(x)
+  swap( x , unique(x) , diverge_hcl(n,palette = palette,alpha = alpha) )
+}
+
+#scan a strong of positions and earmark regions of low density below a threshold (also plots to help you choose)
 mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,return_bins_dt=FALSE,plot=TRUE,min_sd=NULL,min_abs=NULL,...){
   if(is.null(bandwidth)){bandwidth <- "nrd0"}
   if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
@@ -176,8 +188,7 @@ read_blastn_basic <- function(fname){
 
 #length, because why spend your life typing "ength" all the time?
 l <- function(x){
-  warning("Naughty length shortcut used, please replace with call to `length`() ...")
-  length(x)
+  stop("Naughty length shortcut used! Please replace with call to `length`() ...")
 }
 
 #simultaneously change the names of things to a particular thing if they match a particular string.
@@ -226,9 +237,6 @@ sample_df <- function(df,n=10,...){
   df[ sample.int(nrow(df),n,...) ]
 }
 
-p <- function(x){
-  print(x)
-}
 
 #random_matrix( 5 , 5 , symmetric = T, all_pos=F )
 random_matrix <- function(m,n=m,symmetric=F,all_pos=T){
