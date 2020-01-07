@@ -8,6 +8,10 @@ library(Rcpp)
 library(colorspace)
 
 
+#great when reading in JPGs, which are often three arrays giving the r g b .. to plot in base
+  #rgb is a three item vector
+rgb2hex <- function(rgb) sprintf('#%s',paste(as.hexmode(rgb),collapse = ''))
+
 #I hate those empty dots base plot defaults to
 par(pch=20)
 
@@ -218,10 +222,16 @@ swap <- function(vec,matches,names,na.replacement=NA){
 }
 
 #length of a vector
-#euclidean_dist(c(3,4))
-euclidean_dist <-function(x){
+#(c(3,4))
+vec_length <-function(x){
   ( sum( x**2 ) )**(1/2)
 }
+
+#euc dists between points described in lists of coords
+euc_dist<-function(x1,x2,y1,y2){
+  sqrt( ((x1-x2)**2) + ((y1-y2)**2) )
+}
+
 
 #as the title says. relative probs should be positive (duh) and same order as events (duh)
 #t <- random_draws_from_any_discreet_distribution(n=50000,events=LETTERS[1:5],relative_probs=1:5) %>% table; t / max(t) * 5 ; rm(t)
