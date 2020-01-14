@@ -7,6 +7,23 @@ library(parallel)
 library(Rcpp)
 library(colorspace)
 
+#minor_allele_frequency(sample(1,20,r=T))
+minor_allele_frequency <- function(x){
+  tbl <- table(x)
+  if(length(tbl)==1){return(NA)}
+  min <- tbl[order(tbl)][1]
+  min / sum(tbl)
+}
+
+
+#minor_allele(sample(1:3,20,r=T))
+minor_allele <- function(x){
+  tbl <- table(x)
+  ma <- names(tbl[order(tbl)])[1]
+  if(class(x)=="numeric"){ return(as.numeric(ma)) }
+  if(class(x)=="integer"){ return(as.integer(ma)) }
+  return(ma)
+}
 
 #great when reading in JPGs, which are often three arrays giving the r g b .. to plot in base
   #rgb is a three item vector
