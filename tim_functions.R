@@ -22,15 +22,15 @@ Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
 Sys.setlocale('LC_ALL','C')
 
 #create an empty plot with ranges x=c(low,high) and y=ditto
-null_plot <- function(x,y,...){
-  plot(NULL,xlim=range(x),ylim=range(y),...)
+null_plot <- function(x,y,xlab=NA,ylab=NA,...){
+  plot(NULL,xlim=range(x),ylim=range(y),xlab=xlab,ylab=ylab,...)
 }
 
 #turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
-replace_levels_with_colours <- function(x,palette="Berlin",alpha=1){
+replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl"){
   require(colorspace)
   n <- nu(x)
-  swap( x , unique(x) , diverge_hcl(n,palette = palette,alpha = alpha) )
+  swap( x , unique(x) , match.fun(fun)(n,palette = palette,alpha = alpha) , na.replacement = NA )
 }
 
 #scan a strong of positions and earmark regions of low density below a threshold (also plots to help you choose)
@@ -407,6 +407,10 @@ reduced_l <- theme(
   panel.background = element_rect( fill = "transparent", colour = "black"),
   strip.background = element_rect(fill = "transparent", colour = "black"),
 )
+
+wait <- function(message="Press [enter] to continue"){
+  invisible(readline(prompt=message))
+}
 
 #violin plots in base. could use tweaking to make various things controllable.
 violin_plot <- function(x,y){
