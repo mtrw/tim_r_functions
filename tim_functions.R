@@ -10,9 +10,10 @@ library(colorspace)
 #minor_allele_frequency(sample(1,20,r=T))
 minor_allele_frequency <- function(x){
   tbl <- table(x)
-  if(length(tbl)==1){return(NA)}
+  if(length(tbl)==1){ return(as.numeric(0)) }
   min <- tbl[order(tbl)][1]
-  min / sum(tbl)
+  if ((min / sum(tbl))==1) { browser() }
+  as.numeric(min / sum(tbl))
 }
 
 
@@ -20,9 +21,7 @@ minor_allele_frequency <- function(x){
 minor_allele <- function(x){
   tbl <- table(x)
   ma <- names(tbl[order(tbl)])[1]
-  if(class(x)=="numeric"){ return(as.numeric(ma)) }
-  if(class(x)=="integer"){ return(as.integer(ma)) }
-  return(ma)
+  return(as(ma,class(x)))
 }
 
 #great when reading in JPGs, which are often three arrays giving the r g b .. to plot in base
@@ -139,7 +138,7 @@ scale_between <- function(x,lower,upper){
 #easy way to see the spread of your values. plot the density.
 #pd(c(NA,rnorm(500),NA))
 pd <- function(x,...){
-  x %>% density(na.rm=TRUE,...) %>% plot
+  x %>% density(na.rm=TRUE,...) %>% plot()
 }
 
 #difference between two values but vectorises more intuitively than diff()
