@@ -7,7 +7,15 @@ library(parallel)
 library(Rcpp)
 library(colorspace)
 
-#minor_allele_frequency(sample(1,20,r=T))
+#give it "st" as AG or CT or AGT etc, must be sorted alphabetically.
+IUPAC <- function(st){
+  codes <- c(        "R" ,  "Y" ,  "S" ,  "W" ,  "K" ,  "M" ,  "B" ,   "D" ,   "H" ,   "V" )
+  names(codes) <- c( "AG" , "CT" , "CG" , "AT" , "GT" , "AC" , "CGT" , "AGT" , "ACT" , "ACG" )
+  codes[st]
+}
+#IUPAC(c("AG","AGT","CT"))
+
+#minor_allele_frequency(sample(1,20,r=T)) #BY STATE FOR HAPLOIDS, ONLY ... NOT FOR 0,1,2 ENCODING OF DIPLOIDS
 minor_allele_frequency <- function(x){
   tbl <- table(x)
   if(length(tbl)==1){ return(as.numeric(0)) }
