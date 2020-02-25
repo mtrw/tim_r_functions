@@ -7,6 +7,18 @@ library(parallel)
 library(Rcpp)
 library(colorspace)
 
+
+#basically for assigning multiple captures in \\1 \\2 etc in data.table calls like dt[ , c("var1","var2") := .( sub_capturevec("(\\d)_(.*)(\\d+)$",colname,3)]
+    #nmatch is needed
+    #NEEDS WORK
+# sub_capturevec <- function(pattern,string,nmatch){
+#   sapply(string,function(st){
+#     while( length(grep((sep <- paste0(":",sample(1:1e6,1),":")),st))>0 ){}
+#     sub(pattern,paste0("\\",1:nmatch,collapse=sep),st,perl=T) %>% stringi::stri_split_fixed(sep,omit_empty=T) %>% `[[`(1)
+#   }) %>% alply(1,function(x) x)
+# }
+# sub_capturevec(pattern="(.)_(.)_(.)",string=c("a_b_cde","f_g_hij"),nmatch=3)
+
 #give it "st" as AG or CT or AGT etc, must be sorted alphabetically.
 IUPAC <- function(st){
   codes <- c(        "R" ,  "Y" ,  "S" ,  "W" ,  "K" ,  "M" ,  "B" ,   "D" ,   "H" ,   "V" )
@@ -476,3 +488,85 @@ violin_plot <- function(x,y){
 # rm(t)
 # 
 # violin_plot(p$data_x,p$data_y)
+
+
+#inverses of the effect of doing letters[indices] and LETTERS[indices]
+numbers <- function(x){
+  sapply(x,function(l) which(letters==l))
+}
+NUMBERS <- function(x){
+  sapply(x,function(l) which(LETTERS==l))
+}
+
+#an n-wheeled enigma machine with arbitrary alphabet
+enigma_machine <- function(message,setting=NULL,alphabet="standard"){
+  require(plyr)
+  require(gtools)
+  if(length(alphabet)==1){
+    if(alphabet=="standard"){alphabet<-chr(32:126)} else if (alphabet=="ascii"){alphabet<-chr(1:255)} else if (alphabet=="alphanumeric"){alphabet<-c(LETTERS,0:9," ",".") ; message <- toupper(message) }
+  }
+  nsymbols <- length(alphabet)
+  if(is.null(setting)) {setting<-alphabet[1:min(3,nsymbols)]}
+  nwheel <- length(setting)
+  message_vec <- strsplit(message,"")[[1]]
+  if(any(! message_vec %in% alphabet)){ stop("Illegal characters in message. Change alphabet (to \"ascii\"?) or message.") }
+  
+  #store the wheel settings in enigma. Each wheel is represented twice (once for forwards and once for backwards traversal)
+  wheels <- matrix(rep(1:nsymbols,nwheel),ncol=nwheel) #define enigma here, and set "reverse" mappings by rotating them backwards
+  cap <- nsymbols:1 #any mapping that always swaps entries! (i.e pos3 == 4 => pos4 == 3). This solution is just an easy option (besides the trivial 1:nsymbols, which makes a symmetrical mapping on either side of the cap and doesn't actually encode your message)
+  enigma <- cbind(wheels,cap,wheels)
+  
+  #instructions are given per wheel, but it changes all columns as it should
+  .rotate <- function(col,progress){
+    col <- c( col , (2*nwheel+2)-col )
+    progress <- progress %% nsymbols
+    progress <- c( progress  , nsymbols - progress )
+    progress <- progress %% nsymbols
+    l_ply(1:length(col),function(i){
+      c <- col[i]
+      p <- progress[i]
+      enigma[,c] <<- enigma[ c((p+1):nsymbols,0:(p)) , c ]
+    })
+  }
+  
+  #rotate to initial settings
+  .rotate(1:nwheel,sapply(setting,function(s) which(alphabet==s))-1)
+
+  .keystrike <- function(key){
+    k <- which(alphabet==key)
+    for(i in 1:ncol(enigma)){
+      k <- enigma[k,i]
+    }
+    alphabet[k]
+  }
+  
+  #to turn the wheels as the [en|de]coding takes place
+  intervals <- nsymbols**(0:(nwheel-1))
+  
+  encoded <- character()
+  
+  #run the machine
+  for( i in 1:length(message_vec) ){
+    char <- message_vec[i]
+    .keystrike(char) -> k
+    .rotate(col=which((i %% intervals)==0)->t,progress=rep(1,length(t)))
+    encoded[i] <- k
+  }
+  paste0(encoded,collapse = "")
+}
+
+enigma_machine(
+                message="hello sailor",
+                setting=c("e","s","h"),
+                alphabet=c(letters," ")
+              ) -> c
+
+#c
+enigma_machine(
+  message=c,
+  setting=c("e","s","h"),
+  alphabet=c(letters," ")
+)
+
+
+
