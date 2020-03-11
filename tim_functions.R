@@ -555,6 +555,7 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
   paste0(encoded,collapse = "")
 }
 
+
 enigma_machine(
                 message="hello sailor",
                 setting=c("e","s","h"),
@@ -570,3 +571,17 @@ enigma_machine(
 
 
 
+
+
+
+most_frequent_by_margin <- function(x,f1_vs_f2=2){
+  if(nu(x)==1){return(x[1])}
+  top2 <- (table(x) %>% sort(decreasing = T))[1:2]
+  if(top2[1]/top2[2] >= f1_vs_f2){
+    return(as(names(top2)[1],class(x)))
+  } else {
+    as(NA,class(x))
+  }
+}
+#most_frequent_by_margin(c(0,0,0,1,1,1,1,2,2,3,4,5,6))
+#most_frequent_by_margin(c(0,0,1,1,1,1,2,2,3,4,5,6))
