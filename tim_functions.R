@@ -63,10 +63,32 @@ null_plot <- function(x,y,xlab=NA,ylab=NA,...){
 }
 
 #turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
-replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl"){
+replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl",plot=FALSE){
   require(colorspace)
   n <- nu(x)
-  swap( x , unique(x) , match.fun(fun)(n,palette = palette,alpha = alpha) , na.replacement = NA )
+  cols <- match.fun(fun)(n,palette = palette,alpha = alpha)
+  colvec <- swap( x , unique(x) , cols , na.replacement = NA )
+  if(plot==FALSE) {
+    return(colvec)
+  } else {
+    # null_plot(y=1:length(cols),x=rep(1,length(cols)),xaxt="n",yaxt="n")
+    # text(y=1:length(cols),x=rep(1,length(cols)),labels=unique(x),col=cols)
+    null_plot(y=1,x=1,xaxt="n",yaxt="n",bty="n")
+    legend(x=1,legend=unique(x),fill=cols,text.col=cols)
+  }
+}
+
+#turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
+replace_scale_with_colours <- function(x,palette="ag_GrnYl",fun="sequential_hcl",alpha=1,plot=FALSE){
+  require(colorspace)
+  s <- x %>% scale_between(1,100) %>% round
+  cols <- match.fun(fun)(100,palette = palette,alpha = alpha)
+  if(plot==FALSE) {
+    return(cols[s])
+  } else {
+    plot(y = (1:100)%>%scale_between(min(x,na.rm=T),max(x,na.rm=T)),x=rep(0,100),ylab=NA,xlab=NA,xaxt="n",col=cols)
+    return(cols[s])
+  }
 }
 
 #scan a strong of positions and earmark regions of low density below a threshold (also plots to help you choose)
@@ -151,14 +173,18 @@ mc_grid_ply <- function(rows,cols,FUN,cores=25,...) {
 #scale a list of values to between two points, proportionally spaced as they were originally
 #rnorm(100) %>% scale_between(20,29) %>% pd
 scale_between <- function(x,lower,upper){
-  if(all(x==mean(x))) return(rep(mean(c(lower,upper)),length(x)))
-  ( x - min(x) ) / (max(x)-min(x)) * (upper-lower) + lower
+  if(all(x==mean(x,na.rm=T))) return(rep(mean(c(lower,upper),na.rm=T),length(x)))
+  ( x - min(x,na.rm=T) ) / (max(x,na.rm=T)-min(x,na.rm=T)) * (upper-lower) + lower
 }
 
 #easy way to see the spread of your values. plot the density.
 #pd(c(NA,rnorm(500),NA))
-pd <- function(x,...){
-  x %>% density(na.rm=TRUE,...) %>% plot()
+pd <- function(x,add=F,...){
+  if(!add){
+    x %>% density(na.rm=TRUE,...) %>% plot()
+  } else {
+    x %>% density(na.rm=TRUE,...) %>% lines()
+  }
 }
 
 #difference between two values but vectorises more intuitively than diff()
