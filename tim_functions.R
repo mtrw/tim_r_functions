@@ -151,7 +151,7 @@ mc_grid_ply <- function(rows,cols,FUN,cores=25,...) {
 #scale a list of values to between two points, proportionally spaced as they were originally
 #rnorm(100) %>% scale_between(20,29) %>% pd
 scale_between <- function(x,lower,upper){
-  if(all(x==0)) return(x)
+  if(all(x==mean(x))) return(rep(mean(c(lower,upper)),length(x)))
   ( x - min(x) ) / (max(x)-min(x)) * (upper-lower) + lower
 }
 
