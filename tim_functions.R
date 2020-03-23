@@ -19,6 +19,32 @@ library(colorspace)
 # }
 # sub_capturevec(pattern="(.)_(.)_(.)",string=c("a_b_cde","f_g_hij"),nmatch=3)
 
+#pca is a SNPRelate PCA object. Tables must contain at least a column called "sample.id" (optional col, cex, pch)
+plot_pca_snprelate <- function(pca=pca,col_size_table=data.table(sample.id=pca$sample.id,col=1,pch=20,cex=1),pcs=c(1,2),scree=0L){
+  if(scree>0L){
+    plot(x=1:scree,y=pca$eigenval[1:scree]/sum(pca$eigenval[1:scree]),main="Scree plot",ylab="Proportion of variance explained",xlab="Principal Component",pch=20)
+    wait("Please press [ENTER] to continue to the next plot.")
+  }
+  dt <- data.table(
+    sample.id = pca$sample.id,
+    x = pca$eigenvect[,pcs[1]] * pca$eigenval[pcs[1]],
+    y = pca$eigenvect[,pcs[2]] * pca$eigenval[pcs[2]]
+  )
+  dt <- col_size_table[dt,on="sample.id"]
+  if(!"cex" %in% colnames(dt)) dt[,cex:=1]
+  if(!"pch" %in% colnames(dt)) dt[,pch:=20]
+  if(!"col" %in% colnames(dt)) dt[,col:=1]
+  plot(
+    x=dt$x,
+    y=dt$y,
+    col=dt$col,
+    cex=dt$cex %>% scale_between(0.5,1.5),
+    pch=dt$pch,
+    xlab=paste0("PC",pcs[1]),
+    ylab=paste0("PC",pcs[2])
+  )
+}
+
 #give it "st" as AG or CT or AGT etc, must be sorted alphabetically.
 IUPAC <- function(st){
   codes <- c(        "R" ,  "Y" ,  "S" ,  "W" ,  "K" ,  "M" ,  "B" ,   "D" ,   "H" ,   "V" )
@@ -410,11 +436,12 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
   out
 }
 
-
-
-
-
-
+#just makes things easier
+view_matrix <- function(mat,n=10){
+  m <- cbind(mat[1:n,1:n],rep("...",n))
+  m <- rbind(m,rep("...",n+1))
+  m
+}
 
 
 
