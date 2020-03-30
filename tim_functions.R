@@ -19,6 +19,8 @@ library(colorspace)
 # }
 # sub_capturevec(pattern="(.)_(.)_(.)",string=c("a_b_cde","f_g_hij"),nmatch=3)
 
+
+
 #pca is a SNPRelate PCA object. Tables must contain at least a column called "sample.id" (optional col, cex, pch)
 plot_pca_snprelate <- function(pca=pca,col_size_table=data.table(sample.id=pca$sample.id,col=1,pch=20,cex=1),pcs=c(1,2),scree=0L){
   if(scree>0L){
@@ -89,7 +91,7 @@ null_plot <- function(x,y,xlab=NA,ylab=NA,...){
 }
 
 #turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
-replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl",plot=FALSE){
+replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl",plot=FALSE,newplot=TRUE){
   require(colorspace)
   n <- nu(x)
   cols <- match.fun(fun)(n,palette = palette,alpha = alpha)
@@ -99,8 +101,8 @@ replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_
   } else {
     # null_plot(y=1:length(cols),x=rep(1,length(cols)),xaxt="n",yaxt="n")
     # text(y=1:length(cols),x=rep(1,length(cols)),labels=unique(x),col=cols)
-    null_plot(y=1,x=1,xaxt="n",yaxt="n",bty="n")
-    legend(x=1,legend=unique(x),fill=cols,text.col=cols)
+    if(newplot) {null_plot(x=0,y=0,xaxt="n",yaxt="n",bty="n")}
+    legend(x="topleft",legend=unique(x),fill=cols,text.col=cols)
   }
 }
 
@@ -222,10 +224,14 @@ difff <- function(a,b){
 #z-transform values in a vec
 #z_transform(x = ((runif(100))**2)+20  ) %>% pd
 z_transform <- function(x){
-  if ( sd(x)==0 ){
-    return(rep(0,times=length(x)))
+  if ( sd(x,na.rm=TRUE)==0 ){
+    a <- rep(0,times=length(x))
+    a[is.na(x)] <- NA
+    return(a)
   }
-  (mean(x)-x) / sd(x)
+  b <- (mean(x,na.rm=T)-x) / sd(x,na.rm=T)
+  b[is.na(x)] <- NA
+  b
 }
 
 #number of unique entries in vector
