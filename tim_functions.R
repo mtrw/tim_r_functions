@@ -6,6 +6,7 @@ library(ggplot2)
 library(parallel)
 library(Rcpp)
 library(colorspace)
+library(zoo)
 
 
 #basically for assigning multiple captures in \\1 \\2 etc in data.table calls like dt[ , c("var1","var2") := .( sub_capturevec("(\\d)_(.*)(\\d+)$",colname,3)]
