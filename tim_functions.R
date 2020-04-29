@@ -9,6 +9,7 @@ library(colorspace)
 library(zoo)
 
 
+
 #basically for assigning multiple captures in \\1 \\2 etc in data.table calls like dt[ , c("var1","var2") := .( sub_capturevec("(\\d)_(.*)(\\d+)$",colname,3)]
     #nmatch is needed
     #NEEDS WORK
@@ -20,7 +21,26 @@ library(zoo)
 # }
 # sub_capturevec(pattern="(.)_(.)_(.)",string=c("a_b_cde","f_g_hij"),nmatch=3)
 
+x <- sample.int(3,20,replace=T)
 
+most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out=NA,threshold_notmet_out=NA){
+  if(na.rm){
+    x <- x[!is.na(x)]
+  }
+  x[is.na(x)] <- "NA"
+  tbl <- table(x)
+  Ma <- names(tbl[order(-tbl)])[1]
+  if((tbl[order(-tbl)][1]==tbl[order(-tbl)][2])){
+    draw_out
+  } else if (Ma=="NA"){
+    na_wins_out
+  } else if (tbl[order(-tbl)][1]/sum(tbl) < threshold_prop){
+    threshold_notmet_out
+  } else {
+    as(Ma,class(x))
+  }
+}
+#most_common_thing(x=c(1,1,1,2,2,2,3,3,NA,NA,NA,NA,NA),draw_out="DRAW!",na_wins_out="na was the most common",na.rm=T)
 
 #pca is a SNPRelate PCA object. Tables must contain at least a column called "sample.id" (optional col, cex, pch)
 plot_pca_snprelate <- function(pca=pca,col_size_table=data.table(sample.id=pca$sample.id,col=1,pch=20,cex=1),pcs=c(1,2),scree=0L){
@@ -88,7 +108,7 @@ Sys.setlocale('LC_ALL','C')
 
 #create an empty plot with ranges x=c(low,high) and y=ditto
 null_plot <- function(x,y,xlab=NA,ylab=NA,...){
-  plot(NULL,xlim=range(x),ylim=range(y),xlab=xlab,ylab=ylab,...)
+  plot(NULL,xlim=range(x,na.rm=T),ylim=range(y,na.rm=T),xlab=xlab,ylab=ylab,...)
 }
 
 #turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
