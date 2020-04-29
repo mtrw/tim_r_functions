@@ -27,10 +27,17 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
   if(na.rm){
     x <- x[!is.na(x)]
   }
+  if(length(x)==0){
+    stop("Length of x is zero")
+  }
   x[is.na(x)] <- "NA"
   tbl <- table(x)
   Ma <- names(tbl[order(-tbl)])[1]
-  if((tbl[order(-tbl)][1]==tbl[order(-tbl)][2])){
+
+  if (length(table)==1){
+    as(Ma,class(x))
+  }
+  else if (tbl[order(-tbl)][1]==tbl[order(-tbl)][2]){
     draw_out
   } else if (Ma=="NA"){
     na_wins_out
