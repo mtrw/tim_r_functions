@@ -52,7 +52,7 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
 #pca is a SNPRelate PCA object. Tables must contain at least a column called "sample.id" (optional col, cex, pch)
 plot_pca_snprelate <- function(pca=pca,col_size_table=data.table(sample.id=pca$sample.id,col=1,pch=20,cex=1),pcs=c(1,2),scree=0L){
   if(scree>0L){
-    plot(x=1:scree,y=pca$eigenval[1:scree]/sum(pca$eigenval[1:scree]),main="Scree plot",ylab="Proportion of variance explained",xlab="Principal Component",pch=20)
+    plot(x=1:scree,y=pca$eigenval[1:scree]/sum(pca$eigenval),main="Scree plot",ylab="Proportion of variance explained",xlab="Principal Component",pch=20)
     wait("Please press [ENTER] to continue to the next plot.")
   }
   dt <- data.table(
@@ -68,7 +68,7 @@ plot_pca_snprelate <- function(pca=pca,col_size_table=data.table(sample.id=pca$s
     x=dt$x,
     y=dt$y,
     col=dt$col,
-    cex=dt$cex %>% scale_between(0.5,1.5),
+    cex=dt$cex,
     pch=dt$pch,
     xlab=paste0("PC",pcs[1]),
     ylab=paste0("PC",pcs[2])
