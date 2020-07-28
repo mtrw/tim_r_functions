@@ -11,6 +11,20 @@ library(stringi)
 
 
 
+#from http://www.sthda.com/english/wiki/impressive-package-for-3d-and-4d-graph-r-software-and-data-visualization
+#good for PCAs, puts dots in 3D space and also on the bottom surface
+scatter3D_fancy <- function(x, y, z, ... )
+{
+  require(plot3D)
+  panelfirst <- function(pmat) {
+    XY <- trans3D(x, y, z = rep(min(z), length(z)), pmat = pmat)
+    scatter2D(XY$x, XY$y, col = "#00000055", pch = ".",
+              cex = 2, add = TRUE, colkey = FALSE)
+  }
+  scatter3D(x, y, z, ..., panel.first=panelfirst) 
+}
+
+
 #basically for assigning multiple captures in \\1 \\2 etc in data.table calls like dt[ , c("var1","var2") := .( sub_capturevec("(\\d)_(.*)(\\d+)$",colname,3)]
     #nmatch is needed
     #NEEDS WORK
@@ -258,7 +272,7 @@ z_transform <- function(x){
     a[is.na(x)] <- NA
     return(a)
   }
-  b <- (mean(x,na.rm=T)-x) / sd(x,na.rm=T)
+  b <- (x-mean(x,na.rm=T)) / sd(x,na.rm=T)
   b[is.na(x)] <- NA
   b
 }
@@ -537,11 +551,12 @@ wait <- function(message="Press [enter] to continue"){
 }
 
 #violin plots in base. could use tweaking to make various things controllable.
-violin_plot <- function(x,y){
+violin_plot <- function(x,y,mean=F,...){
   data <- data.table(
     data_x=x,
     data_y=y
   )
+  setkey(data,data_x)
   #calculte densities for violin plot
   violin_data <- data[ , .(density=.(density(data_y))) , by=.(data_x) ]
   
@@ -552,16 +567,18 @@ violin_plot <- function(x,y){
   plot(NULL,xlim=range(data$data_x),ylim=range(data$data_y),xlab=NA,ylab=NA)
   
   #plot mean as a line
-  data[ , .(mean_y = mean(data_y)) , by=.(data_x) ][, lines(data_x,mean_y) ]
+  if(mean==T) { data[ , .(mean_y = mean(data_y)) , by=.(data_x) ][, lines(data_x,mean_y) ] }
   
   
   #plot points and violins
-  lapply( unique(data$data_x) , function(x) {
+  l_ply( unique(data$data_x) , function(x) {
     #points
-    with( data[data_x==x] , points(data_x,data_y,pch=20,cex=.2) )
+    with( data[data_x==x] , points(data_x,data_y,...) )
     #violin
     d <- violin_data[data_x==x]$density[[1]]
+    #scale_by <- violin_width/max(d$y)
     scale_by <- violin_width/max(d$y)
+    
     lines(x+d$y*scale_by,d$x,cex=.2)
     lines(x-d$y*scale_by,d$x,cex=.2)
   })
