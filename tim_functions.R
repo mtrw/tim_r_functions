@@ -267,7 +267,7 @@ difff <- function(a,b){
 #z-transform values in a vec
 #z_transform(x = ((runif(100))**2)+20  ) %>% pd
 z_transform <- function(x){
-  if ( sd(x,na.rm=TRUE)==0 ){
+  if ( sd(x,na.rm=TRUE)==0 | all(is.na(x))  ){
     a <- rep(0,times=length(x))
     a[is.na(x)] <- NA
     return(a)
