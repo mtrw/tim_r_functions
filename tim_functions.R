@@ -324,7 +324,7 @@ read_gff_genes_pgsb <- function(fname){
 #for reading in my fave blast output
 #as produiced by ~/bin/blastn_basic.zsh
 read_blastn_basic <- function(fname){
-  fread(fname,col.names=c("qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ))
+  fread(fname,select=1:12,col.names=c("qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ))
 }
 
 #length, because why spend your life typing "ength" all the time?
@@ -691,7 +691,11 @@ most_frequent_by_margin <- function(x,f1_vs_f2=2){
 #most_frequent_by_margin(c(0,0,0,1,1,1,1,2,2,3,4,5,6))
 #most_frequent_by_margin(c(0,0,1,1,1,1,2,2,3,4,5,6))
 
-
+#take  avector and print something you can copy-paste into code to create it. Also can use `deparse()` but whatever I was young and foolish
+print_as_vec <- function(x){
+  cat(" <- c(\"",paste0(x,collapse="\",\""),"\")",sep="")
+}
+print_as_vec(letters[3:5])
 
 
 bedtools_getfasta <- function(fasta,bed_dt,stranded=T){
@@ -713,3 +717,72 @@ bedtools_getfasta <- function(fasta,bed_dt,stranded=T){
 }
 #d <- data.table(chr=c("chr2R","chr2R"),start=c(0,1),end=c(5,7),strand=c("+","-"),name=c("what","hello"))
 #bedtools_getfasta(fasta="data/ref/Secale_cereale_Lo7_2018v1p1p1_pseudomolecules.fasta",bed_dt=d)
+
+
+
+
+
+
+n <- 150
+rows <- 10
+
+data <- d <- data.table(
+  object_id = paste0("obj_",sample(LETTERS[1:5],n,r=T)),
+  track = sample(c(1:rows),n,r=T),
+  track_names = NULL,
+  start = rnorm(n),
+  score1 = NULL,
+  score2 = NULL
+)
+data[,end:=start+rnorm(.N,0,0.2)]
+
+
+plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score2_name = "Score 2"){
+  if(is.null(data$track_names)) {data$track_names=swap(data$track,sort(unique(data$track)),paste0("track_",1:nu(data$track)))}
+  x_lims <- range(data[,c(start,end)])+c(-sd(data[,pmean(start,end)]*0.2),sd(data[,pmean(start,end)])*0.2)
+  
+  #track lines
+  tl <- data[,.N,by=.(track)][,N:=NULL][]
+  tl <- data.table::rbindlist(list(copy(tl[,pos:=x_lims[1]][]),copy(tl[,pos:=x_lims[2]])))
+ 
+  #connectors
+  data[,idx:=1:.N]
+  cl <- melt( data , measure.vars=c("start","end") , id.vars=c("idx","object_id","track") , variable.name="start_end" , value.name="pos" )
+  plotcl <- lapply(sort(unique(cl$track))[-nu(cl$track)],function(toptrack){
+    c1 <- copy(cl[track==toptrack])
+    c2 <- copy(cl[track==toptrack+1]); setnames(c2,c("idx","track","pos"),c("idx2","track2","pos2"))
+    c2[c1,on=.(object_id,start_end),allow.cartesian=T,nomatch=0]
+  }) %>% data.table::rbindlist()
+  
+  
+  ggplot() +
+    geom_line(data=tl[] , aes(x=pos,y=track,group=track) , size=2 , colour="#bec5d1" ) + #track lines
+    geom_segment(data=data , aes(x=start,xend=end,y=track,yend=track,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
+    geom_segment(data=plotcl , aes(x=pos,xend=pos2,y=track,yend=track2) , alpha=0.3 , size=0.2) +
+    xlab(pos_name)
+  
+}
+plot_tracks(d)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
