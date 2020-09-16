@@ -4,10 +4,10 @@ library(magrittr)
 library(data.table)
 library(ggplot2)
 library(parallel)
-library(Rcpp)
+#library(Rcpp)
 library(colorspace)
-library(zoo)
-library(stringi)
+#library(zoo)
+#library(stringi)
 
 
 
@@ -691,11 +691,11 @@ most_frequent_by_margin <- function(x,f1_vs_f2=2){
 #most_frequent_by_margin(c(0,0,0,1,1,1,1,2,2,3,4,5,6))
 #most_frequent_by_margin(c(0,0,1,1,1,1,2,2,3,4,5,6))
 
-#take  avector and print something you can copy-paste into code to create it. Also can use `deparse()` but whatever I was young and foolish
+#take  avector and print something you can copy-paste into code to create it.
 print_as_vec <- function(x){
   cat(" <- c(\"",paste0(x,collapse="\",\""),"\")",sep="")
 }
-print_as_vec(letters[3:5])
+#print_as_vec(letters[3:5])
 
 
 bedtools_getfasta <- function(fasta,bed_dt,stranded=T){
@@ -723,20 +723,11 @@ bedtools_getfasta <- function(fasta,bed_dt,stranded=T){
 
 
 
-n <- 150
-rows <- 10
-
-data <- d <- data.table(
-  object_id = paste0("obj_",sample(LETTERS[1:5],n,r=T)),
-  track = sample(c(1:rows),n,r=T),
-  track_names = NULL,
-  start = rnorm(n),
-  score1 = NULL,
-  score2 = NULL
-)
-data[,end:=start+rnorm(.N,0,0.2)]
 
 
+#generic printer for bed-style objects with start/end/track info, with lines joining common object types
+#see demo below definition for how columns should be named
+#ability to adjust aesthetics by various scores not yet implemented
 plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score2_name = "Score 2"){
   if(is.null(data$track_names)) {data$track_names=swap(data$track,sort(unique(data$track)),paste0("track_",1:nu(data$track)))}
   x_lims <- range(data[,c(start,end)])+c(-sd(data[,pmean(start,end)]*0.2),sd(data[,pmean(start,end)])*0.2)
@@ -762,7 +753,20 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
     xlab(pos_name)
   
 }
-plot_tracks(d)
+# 
+# n <- 150
+# rows <- 10
+# 
+# data <- d <- data.table(
+#   object_id = paste0("obj_",sample(LETTERS[1:5],n,r=T)),
+#   track = sample(c(1:rows),n,r=T),
+#   track_names = NULL,
+#   start = rnorm(n),
+#   score1 = NULL,
+#   score2 = NULL
+# )
+# data[,end:=start+rnorm(.N,0,0.2)]
+# plot_tracks(d)
 
 
 
