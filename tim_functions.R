@@ -39,6 +39,10 @@ scatter3D_fancy <- function(x, y, z, ... )
 x <- sample.int(3,20,replace=T)
 
 most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out=NA,threshold_notmet_out=NA){
+  #browser()
+  if(all(is.na(x))){
+    return(as(NA,class(x)))
+  }
   if(na.rm){
     x <- x[!is.na(x)]
   }
@@ -53,11 +57,11 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
     as(Ma,class(x))
   }
   else if (tbl[order(-tbl)][1]==tbl[order(-tbl)][2]){
-    draw_out
+    as(draw_out,class(x))
   } else if (Ma=="NA"){
-    na_wins_out
+    as(na_wins_out,class(x))
   } else if (tbl[order(-tbl)][1]/sum(tbl) < threshold_prop){
-    threshold_notmet_out
+    as(threshold_notmet_out,class(x))
   } else {
     as(Ma,class(x))
   }
@@ -728,8 +732,9 @@ bedtools_getfasta <- function(fasta,bed_dt,stranded=T){
 #generic printer for bed-style objects with start/end/track info, with lines joining common object types
 #see demo below definition for how columns should be named
 #ability to adjust aesthetics by various scores not yet implemented
-plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score2_name = "Score 2"){
-  if(is.null(data$track_names)) {data$track_names=swap(data$track,sort(unique(data$track)),paste0("track_",1:nu(data$track)))}
+plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score2_name = "Score 2",lines=TRUE){
+  data <- copy(data)
+  if(is.null(data$track_number)) {data$track_number=swap(data$track,sort(unique(data$track)),1:nu(data$track)) %>% as.numeric}
   x_lims <- range(data[,c(start,end)])+c(-sd(data[,pmean(start,end)]*0.2),sd(data[,pmean(start,end)])*0.2)
   
   #track lines
@@ -738,28 +743,34 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
  
   #connectors
   data[,idx:=1:.N]
-  cl <- melt( data , measure.vars=c("start","end") , id.vars=c("idx","object_id","track") , variable.name="start_end" , value.name="pos" )
-  plotcl <- lapply(sort(unique(cl$track))[-nu(cl$track)],function(toptrack){
-    c1 <- copy(cl[track==toptrack])
-    c2 <- copy(cl[track==toptrack+1]); setnames(c2,c("idx","track","pos"),c("idx2","track2","pos2"))
+  cl <- melt( data , measure.vars=c("start","end") , id.vars=c("idx","object_id","track","track_number") , variable.name="start_end" , value.name="pos" )
+  plotcl <- lapply(sort(unique(cl$track_number))[-nu(cl$track_number)],function(toptrack){
+    c1 <- copy(cl[track_number==toptrack])
+    c2 <- copy(cl[track_number==toptrack+1]); setnames(c2,c("idx","track","track_number","pos"),c("idx2","track2","track_number2","pos2"))
     c2[c1,on=.(object_id,start_end),allow.cartesian=T,nomatch=0]
   }) %>% data.table::rbindlist()
   
   
-  ggplot() +
-    geom_line(data=tl[] , aes(x=pos,y=track,group=track) , size=2 , colour="#bec5d1" ) + #track lines
-    geom_segment(data=data , aes(x=start,xend=end,y=track,yend=track,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
-    geom_segment(data=plotcl , aes(x=pos,xend=pos2,y=track,yend=track2) , alpha=0.3 , size=0.2) +
+  # p <- ggplot() +
+  #   geom_line(data=tl[] , aes(x=pos,y=track,group=track) , size=2 , colour="#bec5d1" ) + #track lines
+  #   geom_segment(data=data , aes(x=start,xend=end,y=track,yend=track,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
+  #   xlab(pos_name)
+  
+  p <- ggplot() +
+    geom_line(data=tl[] , aes(x=pos,y=track_number,group=track_number) , size=2 , colour="#bec5d1" ) + #track lines
+    geom_segment(data=data , aes(x=start,xend=end,y=track_number,yend=track_number,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
     xlab(pos_name)
   
+  if(lines==TRUE){ p <- p + geom_segment(data=plotcl , aes(x=pos,xend=pos2,y=track_number,yend=track2) , alpha=0.3 , size=0.2) }
+  p
 }
-# 
+
 # n <- 150
 # rows <- 10
 # 
 # data <- d <- data.table(
 #   object_id = paste0("obj_",sample(LETTERS[1:5],n,r=T)),
-#   track = sample(c(1:rows),n,r=T),
+#   track = paste0("track_",sample(c(1:rows),n,r=T)),
 #   track_names = NULL,
 #   start = rnorm(n),
 #   score1 = NULL,
