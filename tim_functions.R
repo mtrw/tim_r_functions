@@ -53,7 +53,7 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
   tbl <- table(x)
   Ma <- names(tbl[order(-tbl)])[1]
 
-  if (length(table)==1){
+  if (length(tbl)==1){
     as(Ma,class(x))
   }
   else if (tbl[order(-tbl)][1]==tbl[order(-tbl)][2]){
@@ -66,6 +66,7 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
     as(Ma,class(x))
   }
 }
+#most_common_thing(x=c("G",NA,"T"),draw_out = NA)
 #most_common_thing(x=c(1,1,1,2,2,2,3,3,NA,NA,NA,NA,NA),draw_out="DRAW!",na_wins_out="na was the most common",na.rm=T)
 
 #pca is a SNPRelate PCA object. Tables must contain at least a column called "sample.id" (optional col, cex, pch)
