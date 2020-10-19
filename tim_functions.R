@@ -141,16 +141,16 @@ null_plot <- function(x,y,xlab=NA,ylab=NA,...){
 #turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
 replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl",plot=FALSE,newplot=TRUE){
   require(colorspace)
-  n <- nu(x)
+  n <- nu(x[!is.na(x)])
   cols <- match.fun(fun)(n,palette = palette,alpha = alpha)
-  colvec <- swap( x , unique(x) , cols , na.replacement = NA )
+  colvec <- swap( x , unique(x[!is.na(x)]) , cols , na.replacement = NA )
   if(plot==FALSE) {
     return(colvec)
   } else {
     # null_plot(y=1:length(cols),x=rep(1,length(cols)),xaxt="n",yaxt="n")
     # text(y=1:length(cols),x=rep(1,length(cols)),labels=unique(x),col=cols)
     if(newplot) {null_plot(x=0,y=0,xaxt="n",yaxt="n",bty="n")}
-    legend(x="topleft",legend=unique(x),fill=cols,text.col=cols)
+    legend(x="topleft",legend=unique(x[!is.na(x)]),fill=cols,text.col=cols)
   }
 }
 
