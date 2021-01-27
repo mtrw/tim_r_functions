@@ -307,7 +307,12 @@ pmean2 <- pmean #legacy reasons
 
 #read a gff3 format file
 read_gff <- function(fname){
-  fread( cmd=paste("cat",fname,"| grep -v '^#'") ,col.names=c("seqname","source","feature","start","end","score","strand","frame","attribute"))
+  if(grepl("\\.gz$",fname)){
+    cat <- "zcat"
+  } else {
+    cat <- "cat"
+  }
+  fread( cmd=paste(cat,fname,"| grep -v '^#'") ,col.names=c("seqname","source","feature","start","end","score","strand","frame","attribute"))
 }
 
 #as above but
