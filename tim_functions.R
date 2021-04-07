@@ -167,40 +167,47 @@ replace_scale_with_colours <- function(x,palette="ag_GrnYl",fun="sequential_hcl"
   }
 }
 
-#scan a strong of positions and earmark regions of low density below a threshold (also plots to help you choose)
-mark_low_density <- function(vec,bandwidth=NULL,min_run_length=NULL,n_bins=1e6,return_bins_dt=FALSE,plot=TRUE,min_sd=NULL,min_abs=NULL,...){
+#scan a string of positions and earmark regions of low density below a threshold (also plots to help you choose)
+#default output is the original vector with include or not flags
+#bins_dt gives a yes or no for each density calculation point (bin)
+extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min_run_length=0,n_bins=NULL,return_bins_dt=FALSE,plot=TRUE,lower=T,...){
   if(is.null(bandwidth)){bandwidth <- "nrd0"}
   if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
-  binsize <- diff(range(vec))/n_bins
-  d <- density(vec,bw=bandwidth,n=n_bins+2,from=min(vec)-binsize,to=max(vec)+binsize,...)
+  if(!is.null(n_bins)) {
+    binsize <- diff(range(vec))/n_bins
+    d <- density(vec,bw=bandwidth,n=n_bins+2,from=min(vec)-binsize,to=max(vec)+binsize,...)
+  } else {
+    d <- density(vec,bw=bandwidth,from=min(vec),to=max(vec),...)
+    d <- density(vec,bw=bandwidth,from=min(vec),to=max(vec))
+  }
   if(!is.null(min_sd)){min <- mean(d$y)-(sd(d$y)*min_sd)}
   if(plot){
     plot(d$x,d$y,type="l")
     abline(h = min)
   }
   
-  filter <- d$y<min #TRUE mean it's too low and should be filtered
-  if(!is.null(min_run_length)){
-    r <- rle(filter)
-    r$values[r$values==TRUE & r$lengths<min_run_length] <- FALSE
-    filter <- inverse.rle(r)
-  }
+  filter <- d$y<min #TRUE means it's too low and should be filtered
+  r <- rle(filter)
+  r$values[r$values==TRUE & r$lengths<min_run_length] <- FALSE
+  filter <- inverse.rle(r)
   if(return_bins_dt){
     return(data.table(
       x=d$x,
-      include=filter
+      include=if(lower==T){filter}else{!filter}
     ))
   }
   dtv <- data.table(vec=vec)
-  dtf <- data.table(filter=filter,vec=d$x)
-  dtf[dtv,on=.(vec),roll=T]
+  dtf <- data.table(filter=if(lower==T){filter}else{!filter},vec=d$x)
+  dtf[dtv,on=.(vec),roll='nearest']
 }
 # ex <- data.table(
 #   pos={ patches <- runif(50)*1e9; rnorm(1e6,rep(patches,each=1e6/50),rep(runif(50,1e5,1e8),each=1e6/50)) },
 #   chr=rep(c(1L,2L),each=0.5e6)
 # )
-# mark_low_density(vec=ex[chr==1]$pos,bandwidth=NULL,min_sd=0,n_bins=45,min_run_length=12,return_bins_dt=FALSE)
+# #debugonce(extract_regions_density)
+# extract_regions_density(vec=ex[chr==1]$pos,bandwidth=NULL,min_sd=-1,n_bins=400,min_run_length=1,return_bins_dt=TRUE,lower=FALSE)
 # ex[ , mark_low_density(pos,min_sd=-.2) , by=.(chr)]
+
 
 
 #n stats for genomes
