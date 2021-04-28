@@ -170,21 +170,25 @@ replace_scale_with_colours <- function(x,palette="ag_GrnYl",fun="sequential_hcl"
 #scan a string of positions and earmark regions of low density below a threshold (also plots to help you choose)
 #default output is the original vector with include or not flags
 #bins_dt gives a yes or no for each density calculation point (bin)
-extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min_run_length=0,n_bins=NULL,return_bins_dt=FALSE,plot=TRUE,lower=T,...){
+extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min_run_length=0,n_bins=NULL,return_bins_dt=FALSE,plot=TRUE,lower=T,d_from=NULL,d_to=NULL,...){
   if(is.null(bandwidth)){bandwidth <- "nrd0"}
   if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
+  if(is.null(d_from)){d_from <- min(vec)-binsize}
+  if(is.null(d_to)){d_to <- max(vec)+binsize}
+  
+  
   if(!is.null(n_bins)) {
     binsize <- diff(range(vec))/n_bins
-    d <- density(vec,bw=bandwidth,n=n_bins+2,from=min(vec)-binsize,to=max(vec)+binsize,...)
+    d <- density(vec,bw=bandwidth,n=n_bins+2,from=d_from,to=d_to,...)
   } else {
-    d <- density(vec,bw=bandwidth,from=min(vec),to=max(vec),...)
-    d <- density(vec,bw=bandwidth,from=min(vec),to=max(vec))
+    d <- density(vec,bw=bandwidth,from=d_from,to=d_to,...)
   }
   if(!is.null(min_sd)){min <- mean(d$y)-(sd(d$y)*min_sd)}
   if(plot){
     plot(d$x,d$y,type="l")
     abline(h = min)
   }
+  
   
   filter <- d$y<min #TRUE means it's too low and should be filtered
   r <- rle(filter)
