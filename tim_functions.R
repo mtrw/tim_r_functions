@@ -10,6 +10,219 @@ library(colorspace)
 #library(stringi)
 
 
+get_lastz_dotplot <- function(
+  file1,
+  file2,
+  range1=NULL,
+  range2=NULL,
+  seq1=NULL,
+  seq2=NULL,
+  annot1=NULL,
+  annot2=NULL,
+  lastz_binary="/opt/Bio/lastz/1.04.03/bin/lastz",
+  min_length_plot=0,
+  save_alignments_to_file=NULL,
+  save_dots_to_file=NULL,
+  plot_from_file=NULL,
+  args="--notransition --step=150 --nogapped"
+){
+  
+  
+  if(is.null(plot_from_file)){ #we need to make the alignments
+    
+    tfo <- tempfile() #output (alignment)
+    tfd <- tempfile() #output (dotplot info)
+    
+    file1call <- file1
+    file2call <- file2
+    
+    options(scipen = 999)
+    if(!is.null(seq1)){
+      tf1 <- tempfile()
+      writeLines(seq1,tf1)
+      file1call <- paste0(file1call,"[subset=",tf1)
+      if(!is.null(range1)){
+        file1call <- paste0(file1call,",",round(range1[1]),"..",round(range1[2]))
+      }
+      file1call <- paste0(file1call,"]")
+    }
+    if(!is.null(seq2)){
+      tf2 <- tempfile()
+      writeLines(seq2,tf2)
+      file2call <- paste0(file2call,"[subset=",tf2)
+      if(!is.null(range2)){
+        file2call <- paste0(file2call,",",round(range2[1]),"..",round(range2[2]))
+      }
+      file2call <- paste0(file2call,"]")
+    }
+    
+    options(scipen = 0)
+    cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot=",tfd," > ",tfo)
+    #system(paste("cat",tf1))
+    #system(paste("cat",tf2))
+    ce("Running command: ",cmd)
+    system(cmd)
+    
+    if(!is.null(save_alignments_to_file)){
+      file.copy(tfo,save_alignments_to_file)
+      ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
+    }
+    
+    if(!is.null(save_dots_to_file)){
+      file.copy(tfd,save_dots_to_file)
+      ce("Dots saved as ",save_dots_to_file," in ",getwd())
+    }
+    
+    unlink(tf1)
+    unlink(tf2)
+    unlink(tfo)
+    dp <- fread(tfd,header=T,col.names=c("s1","s2"))
+    unlink(tfd)
+  } else {
+    tfd <- plot_from_file
+    dp <- fread(tfd,header=T,col.names=c("s1","s2"))
+  }
+  
+  suppressWarnings(dp[,s1:=as.numeric(s1)])
+  suppressWarnings(dp[,s2:=as.numeric(s2)])
+  dp[,idx:=(1:.N)%%3]
+  #dev dp <- dp[1:54]
+  abs(dp[idx==2,s1]-dp[idx==1,s1]) -> l1_
+  abs(dp[idx==2,s2]-dp[idx==1,s2]) -> l2_
+  dp[,l1:=rep(l1_,each=3)]
+  dp[,l2:=rep(l2_,each=3)]
+  dp[,l:=pmax(l1,l2)]
+  dp <- dp[l>=min_length_plot]
+  dp[l!=max(l) & idx!=0,c:=replace_scale_with_colours(-log(l))] #,fun="sequential_hcl",palette="Reds 3"
+  dp[l==max(l) & idx!=0,c:="#000000"]
+  
+  seq1descript <- paste0(file1,"\n",seq1," :: [ ",range1[1]," .. ",range1[2]," ]")
+  seq2descript <- paste0(file2,"\n",seq2," :: [ ",range2[1]," .. ",range2[2]," ]")
+  
+  #dev.off()
+  par(mar=c(5,5,2,2))
+  
+  null_plot(
+    x=dp$s1,
+    y=dp$s2,
+    xlab=seq1descript,
+    ylab=seq2descript
+  )
+  
+  l_ply(seq(from=1,length.out=nrow(dp)/3,by=3),function(i){
+    lines(
+      x=dp[i:(i+2),s1],
+      y=dp[i:(i+2),s2],
+      col=dp[i:(i+2),c],
+      lwd=1
+    )
+  })
+  
+  if(!is.null(annot1)){
+    fannot1 <- annot1[seqname==seq1 & feature=="exon" & ((end %between% range(dp$s1,na.rm=T)) | (start %between% range(dp$s1,na.rm=T))) ]
+    ce("Annotation for ",seq1)
+    print(fannot1)
+    
+    if (nrow(fannot1)>0){
+      
+      if(is.null(annot1$col)){
+        fannot1[,col:="#f02222"]
+      }
+      if(is.null(annot1$linecol)){
+        fannot1[,linecol:="#f0222211"]
+      }
+      
+      fannot1[,idx:=1:.N]
+      pannot1 <- fannot1[,{
+        data.table(
+          x=c(start,end,NA),
+          y=min(dp$s1,na.rm=T)+(0.02)*abs(diff(range(dp$s1,na.rm=T))),
+          c=col,
+          lc=linecol
+        )
+      },by="idx"]
+      pannot1[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
+      
+      l_ply(seq(from=1,length.out=nrow(pannot1)/3,by=3),function(i){
+        lines(
+          x=pannot1[i:(i+2),x],
+          y=pannot1[i:(i+2),y],
+          col=pannot1[i:(i+2),c],
+          lwd=4,
+          lend="butt"
+        )
+      })
+      
+      abline(
+        v=pannot1[!is.na(x),x],
+        col=pannot1[!is.na(x),lc],
+        lwd=.5
+      )
+    }
+  }
+  
+  if(!is.null(annot2)){
+    fannot2 <- annot2[seqname==seq2 & feature=="exon" & ((end %between% range(dp$s2,na.rm=T)) | (start %between% range(dp$s2,na.rm=T))) ]
+    ce("Annotation for ",seq2)
+    print(fannot2)
+    
+    if (nrow(fannot2)>0){
+      
+      if(is.null(annot2$col)){
+        fannot2[,col:="#f02222"]
+      }
+      if(is.null(annot2$linecol)){
+        fannot2[,linecol:="#f0222211"]
+      }
+      
+      fannot2[,idx:=1:.N]
+      pannot2 <- fannot2[,{
+        data.table(
+          y=c(start,end,NA),
+          x=min(dp$s2,na.rm=T)+(0.02)*abs(diff(range(dp$s2,na.rm=T))),
+          c=col,
+          lc=linecol
+        )
+      },by="idx"]
+      pannot2[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
+      
+      l_ply(seq(from=1,length.out=nrow(pannot2)/3,by=3),function(i){
+        lines(
+          x=pannot2[i:(i+2),x],
+          y=pannot2[i:(i+2),y],
+          col=pannot2[i:(i+2),c],
+          lwd=4,
+          lend="butt"
+        )
+      })
+      
+      abline(
+        h=pannot2[!is.na(x),y],
+        col=pannot2[!is.na(x),lc],
+        lwd=.5
+      )
+    }
+  }
+  
+  
+}
+# get_lastz_dotplot(
+#   file1 = "data/refs/morex_v3_psmols.fasta",
+#   file2 = "data/refs/morex_v3_psmols.fasta",
+#   seq1 = "chr1",
+#   seq2 = "chr5",
+#   range1 = c(100,2345),
+#   range2 = c(57984,59984),
+#   args = "--notransition --step=150 --nogapped", #add any args for lastz you want
+#   save_alignments_to_file=NULL, #give it a filename to save to if you want. if you want to do this, suggest setting the output format argument to lastz
+#   save_dots_to_file=NULL, #give it a filename to save to if you want.
+#   plot_from_file=NULL, #if you've already saved the dots somewhere, give it the file and it will plot directly from that
+#   min_length_plot=500, #min length of an alignment to plot
+#   annot1 = gff1,
+#   annot2 = gff2,
+#   lastz_binary="/opt/Bio/lastz/1.04.03/bin/lastz"
+# )
+
 
 #from http://www.sthda.com/english/wiki/impressive-package-for-3d-and-4d-graph-r-software-and-data-visualization
 #good for PCAs, puts dots in 3D space and also on the bottom surface
