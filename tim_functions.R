@@ -9,6 +9,15 @@ library(colorspace)
 #library(zoo)
 #library(stringi)
 
+left <- function(x){
+  return(range(x,na.rm=T)[1]+0.1*diff(range(x,na.rm=T),na.rm=T))
+}
+#left(1:10)
+
+top <- function(x){
+  return(range(x,na.rm=T)[2]-0.1*diff(range(x,na.rm=T),na.rm=T))
+}
+#top(1:10)
 
 get_lastz_dotplot <- function(
   file1,
@@ -23,19 +32,22 @@ get_lastz_dotplot <- function(
   min_length_plot=0,
   save_alignments_to_file=NULL,
   save_dots_to_file=NULL,
+  save_exons_to_file_seq1=NULL,
+  save_exons_to_file_seq2=NULL,
   plot_from_file=NULL,
-  args="--notransition --step=150 --nogapped"
+  args="--notransition --step=150 --nogapped",
+  plot=T
 ){
-  
-  
+
+  stopifnot(is.null(plot_from_file) | is.character(plot_from_file))
   if(is.null(plot_from_file)){ #we need to make the alignments
-    
+
     tfo <- tempfile() #output (alignment)
     tfd <- tempfile() #output (dotplot info)
-    
+
     file1call <- file1
     file2call <- file2
-    
+
     options(scipen = 999)
     if(!is.null(seq1)){
       tf1 <- tempfile()
@@ -55,24 +67,24 @@ get_lastz_dotplot <- function(
       }
       file2call <- paste0(file2call,"]")
     }
-    
+
     options(scipen = 0)
     cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot=",tfd," > ",tfo)
     #system(paste("cat",tf1))
     #system(paste("cat",tf2))
     ce("Running command: ",cmd)
     system(cmd)
-    
+
     if(!is.null(save_alignments_to_file)){
       file.copy(tfo,save_alignments_to_file)
       ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
     }
-    
+
     if(!is.null(save_dots_to_file)){
       file.copy(tfd,save_dots_to_file)
       ce("Dots saved as ",save_dots_to_file," in ",getwd())
     }
-    
+
     unlink(tf1)
     unlink(tf2)
     unlink(tfo)
@@ -82,7 +94,7 @@ get_lastz_dotplot <- function(
     tfd <- plot_from_file
     dp <- fread(tfd,header=T,col.names=c("s1","s2"))
   }
-  
+
   suppressWarnings(dp[,s1:=as.numeric(s1)])
   suppressWarnings(dp[,s2:=as.numeric(s2)])
   dp[,idx:=(1:.N)%%3]
@@ -95,20 +107,24 @@ get_lastz_dotplot <- function(
   dp <- dp[l>=min_length_plot]
   dp[l!=max(l) & idx!=0,c:=replace_scale_with_colours(-log(l))] #,fun="sequential_hcl",palette="Reds 3"
   dp[l==max(l) & idx!=0,c:="#000000"]
-  
+
   seq1descript <- paste0(file1,"\n",seq1," :: [ ",range1[1]," .. ",range1[2]," ]")
   seq2descript <- paste0(file2,"\n",seq2," :: [ ",range2[1]," .. ",range2[2]," ]")
-  
+
+  if(plot==F){
+    return()
+  }
+
   #dev.off()
   par(mar=c(5,5,2,2))
-  
+
   null_plot(
     x=dp$s1,
     y=dp$s2,
     xlab=seq1descript,
     ylab=seq2descript
   )
-  
+
   l_ply(seq(from=1,length.out=nrow(dp)/3,by=3),function(i){
     lines(
       x=dp[i:(i+2),s1],
@@ -117,21 +133,24 @@ get_lastz_dotplot <- function(
       lwd=1
     )
   })
-  
+
   if(!is.null(annot1)){
     fannot1 <- annot1[seqname==seq1 & feature=="exon" & ((end %between% range(dp$s1,na.rm=T)) | (start %between% range(dp$s1,na.rm=T))) ]
     ce("Annotation for ",seq1)
     print(fannot1)
-    
+    if(!is.null(save_exons_to_file_seq1)){
+      write.csv(fannot1,save_exons_to_file_seq1,row.names=F)
+    }
+
     if (nrow(fannot1)>0){
-      
+
       if(is.null(annot1$col)){
         fannot1[,col:="#f02222"]
       }
       if(is.null(annot1$linecol)){
         fannot1[,linecol:="#f0222211"]
       }
-      
+
       fannot1[,idx:=1:.N]
       pannot1 <- fannot1[,{
         data.table(
@@ -142,7 +161,7 @@ get_lastz_dotplot <- function(
         )
       },by="idx"]
       pannot1[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
-      
+
       l_ply(seq(from=1,length.out=nrow(pannot1)/3,by=3),function(i){
         lines(
           x=pannot1[i:(i+2),x],
@@ -152,7 +171,7 @@ get_lastz_dotplot <- function(
           lend="butt"
         )
       })
-      
+
       abline(
         v=pannot1[!is.na(x),x],
         col=pannot1[!is.na(x),lc],
@@ -160,21 +179,24 @@ get_lastz_dotplot <- function(
       )
     }
   }
-  
+
   if(!is.null(annot2)){
     fannot2 <- annot2[seqname==seq2 & feature=="exon" & ((end %between% range(dp$s2,na.rm=T)) | (start %between% range(dp$s2,na.rm=T))) ]
     ce("Annotation for ",seq2)
     print(fannot2)
-    
+    if(!is.null(save_exons_to_file_seq2)){
+      write.csv(fannot2,save_exons_to_file_seq2,row.names=F)
+    }
+
     if (nrow(fannot2)>0){
-      
+
       if(is.null(annot2$col)){
         fannot2[,col:="#f02222"]
       }
       if(is.null(annot2$linecol)){
         fannot2[,linecol:="#f0222211"]
       }
-      
+
       fannot2[,idx:=1:.N]
       pannot2 <- fannot2[,{
         data.table(
@@ -185,7 +207,7 @@ get_lastz_dotplot <- function(
         )
       },by="idx"]
       pannot2[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
-      
+
       l_ply(seq(from=1,length.out=nrow(pannot2)/3,by=3),function(i){
         lines(
           x=pannot2[i:(i+2),x],
@@ -195,7 +217,7 @@ get_lastz_dotplot <- function(
           lend="butt"
         )
       })
-      
+
       abline(
         h=pannot2[!is.na(x),y],
         col=pannot2[!is.na(x),lc],
@@ -203,8 +225,8 @@ get_lastz_dotplot <- function(
       )
     }
   }
-  
-  
+
+
 }
 # get_lastz_dotplot(
 #   file1 = "data/refs/morex_v3_psmols.fasta",
@@ -234,7 +256,7 @@ scatter3D_fancy <- function(x, y, z, ... )
     scatter2D(XY$x, XY$y, col = "#00000055", pch = ".",
               cex = 2, add = TRUE, colkey = FALSE)
   }
-  scatter3D(x, y, z, ..., panel.first=panelfirst) 
+  scatter3D(x, y, z, ..., panel.first=panelfirst)
 }
 
 
@@ -388,8 +410,8 @@ extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min
   if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
   if(is.null(d_from)){d_from <- min(vec)-binsize}
   if(is.null(d_to)){d_to <- max(vec)+binsize}
-  
-  
+
+
   if(!is.null(n_bins)) {
     binsize <- diff(range(vec))/n_bins
     d <- density(vec,bw=bandwidth,n=n_bins+2,from=d_from,to=d_to,...)
@@ -401,8 +423,8 @@ extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min
     plot(d$x,d$y,type="l")
     abline(h = min)
   }
-  
-  
+
+
   filter <- d$y<min #TRUE means it's too low and should be filtered
   r <- rle(filter)
   r$values[r$values==TRUE & r$lengths<min_run_length] <- FALSE
@@ -608,7 +630,7 @@ euc_dist<-function(x1,x2,y1,y2){
 #t <- random_draws_from_any_discreet_distribution(n=50000,events=LETTERS[1:5],relative_probs=1:5) %>% table; t / max(t) * 5 ; rm(t)
 random_draws_from_any_discreet_distribution <- function(n=1,events,relative_probs){
   lapply( 1:n,   function(x){
-    events[ which( runif(1)*sum(relative_probs) < (cumsum(relative_probs)) )[1] ]    
+    events[ which( runif(1)*sum(relative_probs) < (cumsum(relative_probs)) )[1] ]
   }) %>% unlist
 }
 
@@ -649,8 +671,8 @@ SDs_from_mean <- function(x,SDs){
 ce <- function(...){   cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
 
 #distance to the nearest element of each element
-nearest_in_set <- function(x) { 
-  if(length(x)==1) {return(0)} else  { sapply(1:length(x), function(y) { min (  abs( x[y] - x[setdiff(1:length(x),y)] ) ) } ) } 
+nearest_in_set <- function(x) {
+  if(length(x)==1) {return(0)} else  { sapply(1:length(x), function(y) { min (  abs( x[y] - x[setdiff(1:length(x),y)] ) ) } ) }
 }
 #nearest_in_set(1:5); nearest_in_set((1:5)**2)
 
@@ -674,12 +696,12 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
     points_x <- points_y
     rm(points_y)
   }
-  
+
   len <- length(x)
   if(len!=length(y) | len<2){
     stop("x and y must be equal lengths of at least 2.")
   }
-  
+
   o_x <- order(x)
   o_y <- order(y)
   if((length(o_x != o_y))<0){
@@ -687,7 +709,7 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
   }
   x <- x[o_x]
   y <- y[o_x]
-  
+
   out <- lapply(points_x,function(pt_x){
     #it hits an exact point
     if(length(xeq <- which(x==pt_x))==1){
@@ -773,7 +795,7 @@ u <- function(...){
 #a simple ggplot theme
 reduced_l <- theme(
   axis.line = element_line(colour = "black"),
-  
+
   panel.grid.major = element_line(size=.1 , colour = "grey"),
   panel.grid.minor = element_blank(),
   panel.background = element_rect( fill = "transparent", colour = "black"),
@@ -793,17 +815,17 @@ violin_plot <- function(x,y,mean=F,...){
   setkey(data,data_x)
   #calculte densities for violin plot
   violin_data <- data[ , .(density=.(density(data_y))) , by=.(data_x) ]
-  
+
   #calculate how wide to plot violins
   violin_width <- data[ order(data_x) , {s <- data_x %>% unique %>% diff %>% summary; s[[4]]*0.4} , ]
-  
+
   #set up plot
   plot(NULL,xlim=range(data$data_x),ylim=range(data$data_y),xlab=NA,ylab=NA)
-  
+
   #plot mean as a line
   if(mean==T) { data[ , .(mean_y = mean(data_y)) , by=.(data_x) ][, lines(data_x,mean_y) ] }
-  
-  
+
+
   #plot points and violins
   l_ply( unique(data$data_x) , function(x) {
     #points
@@ -812,7 +834,7 @@ violin_plot <- function(x,y,mean=F,...){
     d <- violin_data[data_x==x]$density[[1]]
     #scale_by <- violin_width/max(d$y)
     scale_by <- violin_width/max(d$y)
-    
+
     lines(x+d$y*scale_by,d$x,cex=.2)
     lines(x-d$y*scale_by,d$x,cex=.2)
   })
@@ -825,7 +847,7 @@ violin_plot <- function(x,y,mean=F,...){
 #   data_y=rnorm(length(t),t**2,t)
 # )
 # rm(t)
-# 
+#
 # violin_plot(p$data_x,p$data_y)
 
 
@@ -849,12 +871,12 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
   nwheel <- length(setting)
   message_vec <- strsplit(message,"")[[1]]
   if(any(! message_vec %in% alphabet)){ stop("Illegal characters in message. Change alphabet (to \"ascii\"?) or message.") }
-  
+
   #store the wheel settings in enigma. Each wheel is represented twice (once for forwards and once for backwards traversal)
   wheels <- matrix(rep(1:nsymbols,nwheel),ncol=nwheel) #define enigma here, and set "reverse" mappings by rotating them backwards
   cap <- nsymbols:1 #any mapping that always swaps entries! (i.e pos3 == 4 => pos4 == 3). This solution is just an easy option (besides the trivial 1:nsymbols, which makes a symmetrical mapping on either side of the cap and doesn't actually encode your message)
   enigma <- cbind(wheels,cap,wheels)
-  
+
   #instructions are given per wheel, but it changes all columns as it should
   .rotate <- function(col,progress){
     col <- c( col , (2*nwheel+2)-col )
@@ -867,7 +889,7 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
       enigma[,c] <<- enigma[ c((p+1):nsymbols,0:(p)) , c ]
     })
   }
-  
+
   #rotate to initial settings
   .rotate(1:nwheel,sapply(setting,function(s) which(alphabet==s))-1)
 
@@ -878,12 +900,12 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
     }
     alphabet[k]
   }
-  
+
   #to turn the wheels as the [en|de]coding takes place
   intervals <- nsymbols**(0:(nwheel-1))
-  
+
   encoded <- character()
-  
+
   #run the machine
   for( i in 1:length(message_vec) ){
     char <- message_vec[i]
@@ -966,11 +988,11 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
   data <- copy(data)
   if(is.null(data$track_number)) {data$track_number=swap(data$track,sort(unique(data$track)),1:nu(data$track)) %>% as.numeric}
   x_lims <- range(data[,c(start,end)])+c(-sd(data[,pmean(start,end)]*0.2),sd(data[,pmean(start,end)])*0.2)
-  
+
   #track lines
   tl <- data[,.N,by=.(track)][,N:=NULL][]
   tl <- data.table::rbindlist(list(copy(tl[,pos:=x_lims[1]][]),copy(tl[,pos:=x_lims[2]])))
- 
+
   #connectors
   data[,idx:=1:.N]
   cl <- melt( data , measure.vars=c("start","end") , id.vars=c("idx","object_id","track","track_number") , variable.name="start_end" , value.name="pos" )
@@ -979,25 +1001,25 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
     c2 <- copy(cl[track_number==toptrack+1]); setnames(c2,c("idx","track","track_number","pos"),c("idx2","track2","track_number2","pos2"))
     c2[c1,on=.(object_id,start_end),allow.cartesian=T,nomatch=0]
   }) %>% data.table::rbindlist()
-  
-  
+
+
   # p <- ggplot() +
   #   geom_line(data=tl[] , aes(x=pos,y=track,group=track) , size=2 , colour="#bec5d1" ) + #track lines
   #   geom_segment(data=data , aes(x=start,xend=end,y=track,yend=track,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
   #   xlab(pos_name)
-  
+
   p <- ggplot() +
     geom_line(data=tl[] , aes(x=pos,y=track_number,group=track_number) , size=2 , colour="#bec5d1" ) + #track lines
     geom_segment(data=data , aes(x=start,xend=end,y=track_number,yend=track_number,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
     xlab(pos_name)
-  
+
   if(lines==TRUE){ p <- p + geom_segment(data=plotcl , aes(x=pos,xend=pos2,y=track_number,yend=track2) , alpha=0.3 , size=0.2) }
   p
 }
 
 # n <- 150
 # rows <- 10
-# 
+#
 # data <- d <- data.table(
 #   object_id = paste0("obj_",sample(LETTERS[1:5],n,r=T)),
 #   track = paste0("track_",sample(c(1:rows),n,r=T)),
@@ -1009,7 +1031,96 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
 # data[,end:=start+rnorm(.N,0,0.2)]
 # plot_tracks(d)
 
+home_office <- function(){
+  verbs <- c(
+    "Assess",
+    "Program",
+    "Reevaluate",
+    "Run",
+    "Draft",
+    "Script",
+    "Edit",
+    "Experiment with",
+    "Primary development of",
+    "Finalise",
+    "Enhance",
+    "Rewrite",
+    "Make additions to",
+    "Set up",
+    "Share",
+    "Correspond about",
+    "Compare"
+  )
 
+  nouns <- c(
+    "files",
+    "documents",
+    "experimental material",
+    "assays",
+    "jobs running",
+    "batch data",
+    "data",
+    "database",
+    "manuscript",
+    "draft",
+    "figures",
+    "primary data",
+    "bams",
+    "issues",
+    "ideas"
+  )
+
+  pronouns <- c(
+    "for",
+    "to do with",
+    "required in",
+    "underway in association with",
+    "about",
+    "as part of"
+  )
+
+  adjective <- c(
+    "ongoing",
+    "completed",
+    "initial",
+    "fast",
+    "complex",
+    "expedited"
+  )
+
+  effort_nouns <- c(
+    "European project",
+    "demography paper",
+    "evolution experiment",
+    "review",
+    "manuscript",
+    "experimental work",
+    "field data collection",
+    "sequencing collaboration",
+    "legal doc",
+    "authorisation",
+    "project management",
+    "pipeline",
+    "scientific output",
+    "calibration endeavour",
+    "measurement acquisition",
+    "data harvesting"
+  )
+
+
+  v <- sapply(1:500,function(i) {
+    paste0(
+      sample(verbs,1)," ",
+      sample(nouns,1)," ",
+      sample(pronouns,1)," ",
+      sample(adjective,1)," ",
+      sample(effort_nouns,1),"."
+    )
+  }
+  )
+  cat(v)
+}
+#home_office()
 
 
 
