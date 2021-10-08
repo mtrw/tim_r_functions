@@ -85,11 +85,11 @@ get_lastz_dotplot <- function(
       ce("Dots saved as ",save_dots_to_file," in ",getwd())
     }
 
-    unlink(tf1)
-    unlink(tf2)
+    if(!is.null(seq1)){ unlink(tf1) }
+    if(!is.null(seq2)){ unlink(tf2) }
     unlink(tfo)
     dp <- fread(tfd,header=T,col.names=c("s1","s2"))
-    unlink(tfd)
+    if(file.exists(tfd)) { unlink(tfd) }
   } else {
     tfd <- plot_from_file
     dp <- fread(tfd,header=T,col.names=c("s1","s2"))
@@ -271,7 +271,7 @@ scatter3D_fancy <- function(x, y, z, ... )
 # }
 # sub_capturevec(pattern="(.)_(.)_(.)",string=c("a_b_cde","f_g_hij"),nmatch=3)
 
-x <- sample.int(3,20,replace=T)
+#x <- sample.int(3,20,replace=T)
 
 most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out=NA,threshold_notmet_out=NA){
   #browser()
@@ -584,9 +584,9 @@ read_blastn_basic <- function(fname){
 }
 
 #length, because why spend your life typing "ength" all the time?
-l <- function(x){
-  stop("Naughty length shortcut used! Please replace with call to `length`() ...")
-}
+# l <- function(x){
+#   stop("Naughty length shortcut used! Please replace with call to `length`() ...")
+# }
 
 #simultaneously change the names of things to a particular thing if they match a particular string.
 #name_by_match(vec=iris$Species,matches = c("set","sicol"),names = c("SETOSA","VERSICOLOR"))
@@ -774,7 +774,7 @@ number_runs <- function(vec){
 tl <- function(dt,n=10){
   dt[1:n,1:n]
 }
-iris %>% tl(3)
+#iris %>% tl(3)
 
 #top right
 tr <- function(dt,n=10){
@@ -859,6 +859,8 @@ NUMBERS <- function(x){
   sapply(x,function(l) which(LETTERS==l))
 }
 
+
+
 #an n-wheeled enigma machine with arbitrary alphabet
 enigma_machine <- function(message,setting=NULL,alphabet="standard"){
   require(plyr)
@@ -917,18 +919,18 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
 }
 
 
-enigma_machine(
-                message="hello sailor",
-                setting=c("e","s","h"),
-                alphabet=c(letters," ")
-              ) -> c
-
-#c
-enigma_machine(
-  message=c,
-  setting=c("e","s","h"),
-  alphabet=c(letters," ")
-)
+# enigma_machine(
+#                 message="hello sailor",
+#                 setting=c("e","s","h"),
+#                 alphabet=c(letters," ")
+#               ) -> c
+# 
+# #c
+# enigma_machine(
+#   message=c,
+#   setting=c("e","s","h"),
+#   alphabet=c(letters," ")
+# )
 
 
 
