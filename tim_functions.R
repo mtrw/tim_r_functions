@@ -9,6 +9,47 @@ library(colorspace)
 #library(zoo)
 #library(stringi)
 
+read_fai <- function(fname,seqname="seqname"){
+  fread(fname,select=1:2,col.names=c(seqname,"length"))
+}
+#fai <- read_fai("whatever.fasta.fai",seqname="chr") #sets column name for sequence id
+
+bedtools_getfasta <- function(infile=NULL,outfile=NULL,bed_dt){
+  bed_dt <- copy(bed_dt)
+  ce("Reminder, bed coords start=0, end=1 will give you just the first base.")
+  if(is.null(infile) | is.null(outfile)){
+    stop("In file and outfile must be specified")
+  }
+  if(!all(c("chr","start","end") %in% colnames(bed_dt))){
+    stop("bam_dt data.table needs at a minimum 'chr', 'start', and 'end' columns. 'name' and 'score' are optional.")
+  }
+  if(!is.null(bed_dt$name)){
+    cmdname <- " -n "
+  } else {
+    cmdname <- " "
+  }
+  if(is.null(bed_dt$score)){
+    bed_dt[,score:="."]
+  }
+  if(is.null(bed_dt$strand)){
+    bed_dt[,strand:="+"]
+  }
+  
+  tfname <- tempfile()
+  write.table(bed_dt,tfname,row.names=F,col.names=F,sep="\t",quote=F)
+  cmd <- paste0("/opt/Bio/bedtools/2.30.0/bin/bedtools getfasta -bed ",tfname," -fi ",infile," -fo ",outfile,cmdname)
+  ce("Running command ",cmd)
+  system(cmd)
+  unlink(tfname)
+  ce("Deleting temp files, bedtools_getfasta function finished.")
+}
+# bedtools_getfasta(
+#   infile="data/refs/morex_v3_psmols.2.7.7.80.10.50.500.mask.fasta",
+#   outfile="data/refs/morex_v3_psmols.complexregions_separate.fasta",
+#   bed_dt=out_regions
+# )
+
+
 left <- function(x){
   return(range(x,na.rm=T)[1]+0.1*diff(range(x,na.rm=T),na.rm=T))
 }
