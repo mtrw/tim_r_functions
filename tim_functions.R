@@ -135,7 +135,12 @@ get_lastz_dotplot <- function(
     tfd <- plot_from_file
     dp <- fread(tfd,header=T,col.names=c("s1","s2"))
   }
-
+  
+  if(nrow(dp)==0){
+    ce("No alignments detected ...")
+    return()
+  }
+  
   suppressWarnings(dp[,s1:=as.numeric(s1)])
   suppressWarnings(dp[,s2:=as.numeric(s2)])
   dp[,idx:=(1:.N)%%3]
