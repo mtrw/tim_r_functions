@@ -9,6 +9,18 @@ library(colorspace)
 #library(zoo)
 #library(stringi)
 
+#draw an arch
+arch <- function(start,end,y1,y2,n=30,...){
+  d <- data.table(
+    x=cos(seq(0,pi,length.out=n)) %>% scale_between(start,end),
+    y=sin(seq(0,pi,length.out=n)) %>% scale_between(y1,y2)
+  )
+  lines(d$x,d$y,...)
+}
+# null_plot(-10:10,-10:10)
+# arch(-5,-2,0,4)
+# arch(5,6,-2,-5,lwd=4,col="red")
+
 read_fai <- function(fname,seqname="seqname"){
   fread(fname,select=1:2,col.names=c(seqname,"length"))
 }
