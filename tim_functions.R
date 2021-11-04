@@ -68,10 +68,18 @@ left <- function(x){
 }
 #left(1:10)
 
+right <- function(x){
+  return(range(x,na.rm=T)[1]+0.9*diff(range(x,na.rm=T),na.rm=T))
+}
+
 top <- function(x){
   return(range(x,na.rm=T)[2]-0.1*diff(range(x,na.rm=T),na.rm=T))
 }
 #top(1:10)
+
+bottom <- function(x){
+  return(range(x,na.rm=T)[2]-0.9*diff(range(x,na.rm=T),na.rm=T))
+}
 
 get_lastz_dotplot <- function(
   file1,
