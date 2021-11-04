@@ -433,7 +433,7 @@ null_plot <- function(x,y,xlab=NA,ylab=NA,revx=F,revy=F,...){
   yl<-range(y,na.rm=T)
   if(revx==T){ xl <- rev(xl) }
   if(revy==T){ yl <- rev(yl) }
-  plot(NULLxlim=xlim,ylim=ylim,xlab=xlab,ylab=ylab,...)
+  plot(NULL,xlim=xlim,ylim=ylim,xlab=xlab,ylab=ylab,...)
 }
 
 
