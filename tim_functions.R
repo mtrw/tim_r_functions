@@ -428,9 +428,14 @@ Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
 Sys.setlocale('LC_ALL','C')
 
 #create an empty plot with ranges x=c(low,high) and y=ditto
-null_plot <- function(x,y,xlab=NA,ylab=NA,...){
-  plot(NULL,xlim=range(x,na.rm=T),ylim=range(y,na.rm=T),xlab=xlab,ylab=ylab,...)
+null_plot <- function(x,y,xlab=NA,ylab=NA,revx=F,revy=F,...){
+  xl<-range(x,na.rm=T)
+  yl<-range(y,na.rm=T)
+  if(revx==T){ xl <- rev(xl) }
+  if(revy==T){ yl <- rev(yl) }
+  plot(NULLxlim=xlim,ylim=ylim,xlab=xlab,ylab=ylab,...)
 }
+
 
 #turn levels of a factor into colours from a colorspace palette (in the diverge_hcl set)
 replace_levels_with_colours <- function(x,palette="Berlin",alpha=1,fun="diverge_hcl",plot=FALSE,newplot=TRUE){
