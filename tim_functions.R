@@ -63,22 +63,22 @@ bedtools_getfasta <- function(infile=NULL,outfile=NULL,bed_dt){
 # )
 
 
-left <- function(x){
-  return(range(x,na.rm=T)[1]+0.1*diff(range(x,na.rm=T),na.rm=T))
+left <- function(x,propframe=0.9){
+  return(range(x,na.rm=T)[1]+(1-propframe)*diff(range(x,na.rm=T),na.rm=T))
 }
 #left(1:10)
 
-right <- function(x){
-  return(range(x,na.rm=T)[1]+0.9*diff(range(x,na.rm=T),na.rm=T))
+right <- function(x,propframe=0.9){
+  return(range(x,na.rm=T)[1]+propframe*diff(range(x,na.rm=T),na.rm=T))
 }
 
-top <- function(x){
-  return(range(x,na.rm=T)[2]-0.1*diff(range(x,na.rm=T),na.rm=T))
+top <- function(x,propframe=0.9){
+  return(range(x,na.rm=T)[2]-(1-propframe)*diff(range(x,na.rm=T),na.rm=T))
 }
 #top(1:10)
 
-bottom <- function(x){
-  return(range(x,na.rm=T)[2]-0.9*diff(range(x,na.rm=T),na.rm=T))
+bottom <- function(x,propframe=0.9){
+  return(range(x,na.rm=T)[2]-propframe*diff(range(x,na.rm=T),na.rm=T))
 }
 
 get_lastz_dotplot <- function(
