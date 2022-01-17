@@ -9,6 +9,56 @@ library(colorspace)
 #library(zoo)
 #library(stringi)
 
+
+
+bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedtools"){
+  #note start/end in bed coords, ie first base is start=0 end=1
+  #note bed requires cols chr start end
+  require(data.table)
+  #dev
+  # fasta <- "/filer-dg/agruppen/seq_shared/MTRW_rye_assembly/releases/Secale_cereale_Lo7_2018v1p1p1/Secale_cereale_Lo7_2018v1p1p1_pseudomolecules.fasta"
+  # bed <- data.table(
+  #   chr=c("chr1R","chr2R"),
+  #   start=c(47,4),
+  #   end=c(4473,45000)
+  # )
+  #\dev
+  namearg <- "-n"
+  if(is.null(bed$name)){
+    bed[,name:="."]
+    namearg <- ""
+  }
+  if(is.null(bed$score)){
+    bed[,score:=0]
+  }
+  if(is.null(bed$strand)){
+    bed[,strand:="+"]
+  }
+  
+  
+  #\dev
+  tfbed <- tempfile()
+  tfout <- tempfile()
+  write.table(bed[,.(chr,start,end,name,score,strand)],tfbed,sep="\t",row.names = F,col.names = F,quote=F)
+  
+  system(paste0("pwd; ls; ",bedtools," nuc -fi ",fasta," -bed ",tfbed," -s ",namearg," > ",tfout))
+  out <- fread(tfout,select=9:13,col.names = c("nA","nC","nG","nT","nN"))
+  
+  unlink(tfbed)
+  unlink(tfout)
+  
+  out[,nNuc:=mapply(sum,nA,nT,nC,nG,nN,na.rm=T)]
+  out[,nNuc_notN:=mapply(sum,nA,nT,nC,nG,na.rm=T)]
+  out[,nGC:=mapply(sum,nC,nG,na.rm=T)]
+  out[,nAT:=mapply(sum,nA,nT,na.rm=T)]
+  out[,gc_prop:=(nGC)/(nNuc_notN)]
+  
+  return(out)
+}
+
+
+
+
 #draw an arch
 arch <- function(start,end,y1,y2,begin_degrees=pi,end_degrees=0,n=30,...){
   d <- data.table(
@@ -82,8 +132,8 @@ bottom <- function(x,propframe=0.9){
 }
 
 get_lastz_dotplot <- function(
-  file1,
-  file2,
+  file1=NULL,
+  file2=NULL,
   range1=NULL,
   range2=NULL,
   seq1=NULL,
