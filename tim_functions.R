@@ -10,7 +10,6 @@ library(colorspace)
 #library(stringi)
 
 
-
 bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedtools"){
   #note start/end in bed coords, ie first base is start=0 end=1
   #note bed requires cols chr start end
@@ -23,6 +22,7 @@ bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedt
   #   end=c(4473,45000)
   # )
   #\dev
+  bed <- copy(bed)
   namearg <- "-n"
   if(is.null(bed$name)){
     bed[,name:="."]
@@ -40,9 +40,10 @@ bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedt
   tfbed <- tempfile()
   tfout <- tempfile()
   write.table(bed[,.(chr,start,end,name,score,strand)],tfbed,sep="\t",row.names = F,col.names = F,quote=F)
-  
-  system(paste0("pwd; ls; ",bedtools," nuc -fi ",fasta," -bed ",tfbed," -s ",namearg," > ",tfout))
-  out <- fread(tfout,select=9:13,col.names = c("nA","nC","nG","nT","nN"))
+  #system(paste("cat ",tfbed))
+  ce("Running command: ",cmd <- paste0(bedtools," nuc -fi ",fasta," -bed ",tfbed," -s ",namearg," > ",tfout))
+  system(cmd)
+  out <- fread(tfout,select=c(1:3,9:13),col.names = c("chr","start","endPlus1","nA","nC","nG","nT","nN"))
   
   unlink(tfbed)
   unlink(tfout)
@@ -51,7 +52,7 @@ bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedt
   out[,nNuc_notN:=mapply(sum,nA,nT,nC,nG,na.rm=T)]
   out[,nGC:=mapply(sum,nC,nG,na.rm=T)]
   out[,nAT:=mapply(sum,nA,nT,na.rm=T)]
-  out[,gc_prop:=(nGC)/(nNuc_notN)]
+  out[,gc_prop:=(nGC)/(nNuc_notN)][]
   
   return(out)
 }
