@@ -9,6 +9,29 @@ library(colorspace)
 #library(zoo)
 #library(stringi)
 
+fold_matrix <- function(m){ #add lower and upper so the result is symmetrical
+  m[lower.tri(m)] <- m[lower.tri(m)] + t(m)[lower.tri(m)] #lower = lower + upper
+  m[upper.tri(m)] <- t(m)[upper.tri(m)] #upper = lower
+  m
+}
+
+fill_upper_from_lower <- function(M){
+  M[upper.tri(M)] <- t(M)[upper.tri(M)]
+  M
+}
+
+fill_lower_from_upper <- function(M){
+  M[lower.tri(M)] <- t(M)[lower.tri(M)]
+  M
+}
+
+circle <- function(x=0,y=0,rad=1,n_pts=200){
+  theta <- seq(from=0,to=((2*pi)-(2*pi)/n_pts),length.out=n_pts)
+  data.table(
+    x = y+sin(theta)*rad,
+    y = x+cos(theta)*rad
+  )
+}
 
 bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedtools"){
   #note start/end in bed coords, ie first base is start=0 end=1
