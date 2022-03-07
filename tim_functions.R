@@ -651,9 +651,9 @@ scale_between <- function(x,lower,upper){
 #pd(c(NA,rnorm(500),NA))
 pd <- function(x,add=F,...){
   if(!add){
-    x %>% density(na.rm=TRUE,...) %>% plot()
+    x %>% density(na.rm=TRUE,...) %>% plot(main=NA)
   } else {
-    x %>% density(na.rm=TRUE,...) %>% lines()
+    x %>% density(na.rm=TRUE,...) %>% lines(main=NA)
   }
 }
 
