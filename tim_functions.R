@@ -4,10 +4,11 @@ library(magrittr)
 library(data.table)
 library(ggplot2)
 library(parallel)
-#library(Rcpp)
+library(Rcpp)
 library(colorspace)
-#library(zoo)
-#library(stringi)
+library(zoo)
+library(stringi)
+
 
 fold_matrix <- function(m){ #add lower and upper so the result is symmetrical
   m[lower.tri(m)] <- m[lower.tri(m)] + t(m)[lower.tri(m)] #lower = lower + upper
@@ -944,7 +945,7 @@ u <- function(...){
 reduced_l <- theme(
   axis.line = element_line(colour = "black"),
 
-  panel.grid.major = element_line(size=.1 , colour = "grey"),
+  panel.grid.major = element_line(linewidth=.1 , colour = "grey"),
   panel.grid.minor = element_blank(),
   panel.background = element_rect( fill = "transparent", colour = "black"),
   strip.background = element_rect(fill = "transparent", colour = "black"),
