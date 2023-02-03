@@ -480,17 +480,26 @@ IUPAC <- function(st){
 }
 #IUPAC(c("AG","AGT","CT"))
 
-#with bug fix
+#for 0, 1, 2 encoding
 minor_allele_frequency <- function(x){
-  warning("This MAF calculator works for HAPLOIDS only. UPDATE ME.")
+  warning("This legacy MAF calculator is crap and doesn't work except in exceptional cases. I was young and foolish. Use MAF() instead!")
   tbl <- table(x)
   if(length(tbl)==1){ return(as.numeric(0)) }
   min <- tbl[order(tbl)][1]
   as.numeric(min / sum(tbl))
 }
 
+#MAF(sample(0:2,20,r=T))
+MAF <- function(gt){
+  #gt <- c(2,1,1,1,1,0,0,0,0,0,2,NA,2,2,2,2,2,2,2,2,2,2,NA,0,0,0,0,0)
+  gt <- gt[!is.na(gt)]
+  if(length(gt)==0){return(NA)}
+  f <- sum(gt)/(length(gt)*2)
+  return(min(f,1-f))
+}
 
-#minor_allele(sample(1:3,20,r=T))
+
+#minor_allele(sample(letters[1:3],20,r=T))
 minor_allele <- function(x){
   tbl <- table(x)
   ma <- names(tbl[order(tbl)])[1]
