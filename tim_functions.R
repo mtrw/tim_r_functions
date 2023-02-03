@@ -480,12 +480,12 @@ IUPAC <- function(st){
 }
 #IUPAC(c("AG","AGT","CT"))
 
-#minor_allele_frequency(sample(1,20,r=T)) #BY STATE FOR HAPLOIDS, ONLY ... NOT FOR 0,1,2 ENCODING OF DIPLOIDS
+#with bug fix
 minor_allele_frequency <- function(x){
+  warning("This MAF calculator works for HAPLOIDS only. UPDATE ME.")
   tbl <- table(x)
   if(length(tbl)==1){ return(as.numeric(0)) }
   min <- tbl[order(tbl)][1]
-  if ((min / sum(tbl))==1) { browser() }
   as.numeric(min / sum(tbl))
 }
 
@@ -648,6 +648,13 @@ scale_between <- function(x,lower,upper){
   ( x - min(x,na.rm=T) ) / (max(x,na.rm=T)-min(x,na.rm=T)) * (upper-lower) + lower
 }
 
+
+#An infix wrapper for the above
+`%scale_between%` <- function(x,y){
+  x %>% scale_between(y[1],y[2])
+}
+
+
 #easy way to see the spread of your values. plot the density.
 #pd(c(NA,rnorm(500),NA))
 pd <- function(x,add=F,...){
@@ -782,6 +789,15 @@ random_draws_from_any_discreet_distribution <- function(n=1,events,relative_prob
     events[ which( runif(1)*sum(relative_probs) < (cumsum(relative_probs)) )[1] ]
   }) %>% unlist
 }
+
+
+#custom temp files, without the access confusion during `system` calls. CREATED TEMPFILES MUST BE MANUALLY CLEANED!
+random_file <- function(ext="tmp",l=21){
+  while(file.exists( tf <- paste0("tf_",paste0(sample(c(sample(LETTERS,lL<-round(l/2),r=T),sample(0:9,l-lL,r=T))),collapse=""),".",ext)   )){1}
+  system(paste("touch",tf))
+  return(tf)
+}
+
 
 #n random (non-repeated!) rows of a data frame
 #sample_df(iris,20)
@@ -1084,6 +1100,26 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
 
 
 
+#Shannon entropy
+entropy <- function(x){
+  t <- table(x,useNA=NULL)
+  p <- t/sum(t)
+  p[which(is.na(p[c("0","1","2")]))] <- 0
+  -sum(p*log(p))
+}
+
+#Expected heterozygosity
+He <- function(x){
+  t <- table(x,useNA=NULL)
+  p <- t/sum(t)
+  p[which(is.na(p[c("0","1","2")]))] <- 0
+  p["0"] +
+    (1/2)*p["1"]*p["0"] +
+    (1/4)*p["1"]**2 +
+    (1/2)*p["1"]*p["2"] +
+    p["2"]
+}
+
 
 
 most_frequent_by_margin <- function(x,f1_vs_f2=2){
@@ -1275,7 +1311,24 @@ home_office <- function(){
 
 
 
-
+# Find the coords of nas in a dist matrix. Contains a potentially useful coordinate converter from dist mat (1d indexing) to regular mat (2d indexing)
+is_na_dist <-function(d){
+  nInds <- attributes(d)$Size
+  
+  is <- rep(1:(nInds-1),(nInds-1):1)
+  js <- sapply( (1:(nInds-1)) , function(i) (2:nInds)[i:(nInds-1)]) %>% unlist
+  
+  naCoords <- data.table(
+    x=integer(sum(is.na(d))),
+    y=integer(sum(is.na(d)))
+  )
+  insert <- 1 #di <- 2
+  l_ply(which(is.na(d)),function(di){
+    naCoords[insert,c("x","y"):=.(is[di],js[di])]
+    insert <<- insert+1
+  })
+  naCoords[]
+}
 
 
 
