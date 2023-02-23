@@ -9,6 +9,22 @@ library(colorspace)
 library(zoo)
 library(stringi)
 
+#q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
+qq <- function(x1,x2="GWAS",npts=1000){
+  x1 <- sort(x1)
+  x2 <- sort(x2)
+  if(x2=="GWAS"){
+    x2=(1:length(x1))/(length(x1))
+  }
+  x1qFn <- approxfun((1:length(x1)) %>% scale_between(1/length(x1),1),x1)
+  x2qFn <- approxfun((1:length(x2)) %>% scale_between(1/length(x2),1),x2)
+  
+  plot(x1qFn((1:npts)/npts),x2qFn((1:npts)/npts),type='l',col="red",lwd=2)
+  abline(0,1,col="#0066FF77",lty=2)
+}
+#two samples qq(x1,x2)
+#GWAS qq(p_vals)
+
 
 fold_matrix <- function(m){ #add lower and upper so the result is symmetrical
   m[lower.tri(m)] <- m[lower.tri(m)] + t(m)[lower.tri(m)] #lower = lower + upper
