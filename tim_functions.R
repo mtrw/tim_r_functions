@@ -1,13 +1,24 @@
-library(plyr)
-library(dplyr)
-library(magrittr)
-library(data.table)
-library(ggplot2)
-library(parallel)
-library(Rcpp)
-library(colorspace)
-library(zoo)
-library(stringi)
+
+library()
+library()
+library()
+library()
+library()
+library()
+library()
+library()
+library()
+library()
+
+install_tim_packages <- function(
+    plist=c("data.table","lme4","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth","sp","jpeg")  
+){
+  for(p in plist){
+    if(! p %in% installed.packages()){
+      install.packages(p)
+    }
+  }
+}
 
 #q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
 qq <- function(x1,x2="GWAS",npts=1000){
