@@ -1,18 +1,12 @@
 
-load_tim_packages <- function(){
-  require(data.table,lme4,ggplot2,dplyr,plyr,magrittr,colourspace,stringi)
-}
-
-
-install_tim_packages <- function(
-    plist=c("data.table","lme4","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth","sp","jpeg")  
-){
-  for(p in plist){
-    if(! p %in% installed.packages()){
-      install.packages(p)
-    }
+plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth","sp","jpeg")  
+for(p in plist){
+  if(! p %in% installed.packages()){
+    install.packages(p)
   }
+  require(p,character.only = T)
 }
+
 
 #q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
 qq <- function(x1,x2="GWAS",npts=1000){
