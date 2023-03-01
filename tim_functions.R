@@ -1,14 +1,8 @@
 
-library()
-library()
-library()
-library()
-library()
-library()
-library()
-library()
-library()
-library()
+load_tim_packages <- function(){
+  require(data.table,lme4,ggplot2,dplyr,plyr,magrittr,colourspace,stringi)
+}
+
 
 install_tim_packages <- function(
     plist=c("data.table","lme4","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth","sp","jpeg")  
