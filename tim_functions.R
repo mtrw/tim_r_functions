@@ -4,9 +4,10 @@ for(p in plist){
   if(! p %in% installed.packages()){
     install.packages(p)
   }
+}
+for(p in plist){
   require(p,character.only = T)
 }
-
 
 #q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
 qq <- function(x1,x2="GWAS",npts=1000){
