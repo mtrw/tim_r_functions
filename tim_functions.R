@@ -1,5 +1,5 @@
 
-plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth","sp","jpeg")  
+plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")  
 for(p in plist){
   if(! p %in% installed.packages()){
     install.packages(p)
