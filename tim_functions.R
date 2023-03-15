@@ -1151,27 +1151,6 @@ print_as_vec <- function(x){
 #print_as_vec(letters[3:5])
 
 
-bedtools_getfasta <- function(fasta,bed_dt,stranded=T){
-  s <- "-s"
-  if(stranded==FALSE){s<-""}
-  b <- copy(bed_dt)
-  b[,idx:=1:.N]
-  b[,{
-    #browser()
-    tf <- tempfile()
-    out <- .SD[,.(chr,start,end,name,score=".",strand)]
-    write.table(x = out,file=tf,sep = "\t",quote=F,row.names = F,col.names = F)
-    cmd <- paste0("/opt/Bio/bedtools/2.26.0/bin/bedtools getfasta ",s," -name -fi ",fasta," -bed ",tf)
-    fa <- system( cmd , intern = T )
-    unlink(tf)
-    .( name=fa[1] , seq=fa[2] )
-  }
-  ,by=idx][,idx:=NULL][]
-}
-#d <- data.table(chr=c("chr2R","chr2R"),start=c(0,1),end=c(5,7),strand=c("+","-"),name=c("what","hello"))
-#bedtools_getfasta(fasta="data/ref/Secale_cereale_Lo7_2018v1p1p1_pseudomolecules.fasta",bed_dt=d)
-
-
 
 
 
