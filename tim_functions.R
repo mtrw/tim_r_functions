@@ -1,4 +1,7 @@
 
+
+
+
 plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")  
 for(p in plist){
   if(! p %in% installed.packages()){
@@ -8,6 +11,36 @@ for(p in plist){
 for(p in plist){
   require(p,character.only = T)
 }
+
+
+
+
+
+#run blastn, get a table
+blastn <- function(
+    ref, #dev ref <- refFile
+    query, #dev query <- qFile
+    blastnBinary=system("which blastn",intern=T),
+    makeBlastDbBinary=system("which makeblastdb",intern=T),
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    moreArgs="",
+    numThreads=4,
+    saveFile=NULL
+){
+  require(data.table)
+  if(!file.exists(paste0(ref,".ndb"))){
+    ce("Making mucleotide blastDB for ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
+    ce("\tRunning command: ",mcmd)
+    system(mcmd)
+  }
+  bcmd <- paste0(blastnBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  ce("Running command: ",bcmd)
+  fread(cmd = bcmd,col.names=outputColNames)
+}
+
+
 
 #q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
 qq <- function(x1,x2="GWAS",npts=1000){
@@ -42,6 +75,8 @@ fill_lower_from_upper <- function(M){
   M
 }
 
+
+
 circle <- function(x=0,y=0,rad=1,n_pts=200){
   theta <- seq(from=0,to=((2*pi)-(2*pi)/n_pts),length.out=n_pts)
   data.table(
@@ -49,6 +84,9 @@ circle <- function(x=0,y=0,rad=1,n_pts=200){
     y = x+cos(theta)*rad
   )
 }
+
+
+
 
 bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedtools"){
   #note start/end in bed coords, ie first base is start=0 end=1
