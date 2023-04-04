@@ -1,7 +1,6 @@
 
 
 
-
 plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")  
 for(p in plist){
   if(! p %in% installed.packages()){
@@ -156,10 +155,11 @@ read_fai <- function(fname,seqname="seqname"){
 }
 #fai <- read_fai("whatever.fasta.fai",seqname="chr") #sets column name for sequence id
 
-bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin="/usr/local/easybuild-2019/easybuild/software/compiler/gcc/10.2.0/bedtools/2.30.0/bin/bedtools"){
+bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin=system("which bedtools",intern=T)){
   b <- copy(bed_dt)
   s <- "-s"
   if(stranded==FALSE){s<-"";b[,strand:="+"]}
+  if(is.null(bed_dt$name)){bed_dt[,name:=chr]}
   of <- if(is.null(outFile)){""} else {paste0(" > ",outFile)}
   b[,idx:=1:.N]
   b[,{
@@ -168,11 +168,13 @@ bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin="
     out <- .SD[,.(chr,start,end,name,score=".",strand)]
     write.table(x = out,file=tf,sep = "\t",quote=F,row.names = F,col.names = F)
     cmd <- paste0(bedToolsBin," getfasta ",s," -name -fi ",fasta," -bed ",tf,of)
+    ce("\tRunning command: ",cmd)
     fa <- system( cmd , intern = T )
     unlink(tf)
     .( name=fa[1] , seq=fa[2] )
   }
   ,by=idx][,idx:=NULL][]
+  invisible()
 }
 
 
