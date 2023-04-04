@@ -159,7 +159,7 @@ bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin=s
   b <- copy(bed_dt)
   s <- "-s"
   if(stranded==FALSE){s<-"";b[,strand:="+"]}
-  if(is.null(bed_dt$name)){bed_dt[,name:=chr]}
+  if(is.null(b$name)){b[,name:=chr]}
   of <- if(is.null(outFile)){""} else {paste0(" > ",outFile)}
   b[,idx:=1:.N]
   b[,{
