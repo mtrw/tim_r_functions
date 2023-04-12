@@ -11,8 +11,29 @@ for(p in plist){
   require(p,character.only = T)
 }
 
-
-
+#run blastx get a table
+blastx <- function(
+    ref, #dev ref <- refFile
+    query, #dev query <- qFile
+    blastxBinary=system("which blastx",intern=T),
+    makeBlastDbBinary=system("which makeblastdb",intern=T),
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    moreArgs="",
+    numThreads=4,
+    saveFile=NULL
+){
+  require(data.table)
+  if(!file.exists(paste0(ref,".pdb"))){
+    ce("Making mucleotide blastDB for ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'prot' -in ",ref)
+    ce("\tRunning command: ",mcmd)
+    system(mcmd)
+  }
+  bcmd <- paste0(blastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  ce("Running command: ",bcmd)
+  fread(cmd = bcmd,col.names=outputColNames)
+}
 
 
 #run blastn, get a table
