@@ -218,6 +218,7 @@ bottom <- function(x,propframe=0.9){
   return(range(x,na.rm=T)[2]-propframe*diff(range(x,na.rm=T),na.rm=T))
 }
 
+
 get_lastz_dotplot <- function(
   file1=NULL,
   file2=NULL,
@@ -266,7 +267,13 @@ get_lastz_dotplot <- function(
       }
       file2call <- paste0(file2call,"]")
     }
-
+    
+    #check self
+    if(is.null(file2) & is.null(range2) & is.null(seq2)){
+      ce("Setting self-alignment")
+    }
+    args <- paste0(args," --self")
+    
     options(scipen = 0)
     cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot=",tfd," > ",tfo)
     #system(paste("cat",tf1))
@@ -432,6 +439,7 @@ get_lastz_dotplot <- function(
 
 
 }
+lastz <- get_lastz_dotplot
 # get_lastz_dotplot(
 #   file1 = "data/refs/morex_v3_psmols.fasta",
 #   file2 = "data/refs/morex_v3_psmols.fasta",
