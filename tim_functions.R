@@ -62,6 +62,7 @@ blastn <- function(
 
 
 
+
 #q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
 qq <- function(x1,x2="GWAS",npts=1000){
   x1 <- sort(x1)
@@ -112,14 +113,6 @@ bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedt
   #note start/end in bed coords, ie first base is start=0 end=1
   #note bed requires cols chr start end
   require(data.table)
-  #dev
-  # fasta <- "/filer-dg/agruppen/seq_shared/MTRW_rye_assembly/releases/Secale_cereale_Lo7_2018v1p1p1/Secale_cereale_Lo7_2018v1p1p1_pseudomolecules.fasta"
-  # bed <- data.table(
-  #   chr=c("chr1R","chr2R"),
-  #   start=c(47,4),
-  #   end=c(4473,45000)
-  # )
-  #\dev
   bed <- copy(bed)
   namearg <- "-n"
   if(is.null(bed$name)){
@@ -198,8 +191,6 @@ bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin=s
   invisible()
 }
 
-
-
 left <- function(x,propframe=0.9){
   return(range(x,na.rm=T)[1]+(1-propframe)*diff(range(x,na.rm=T),na.rm=T))
 }
@@ -267,12 +258,6 @@ get_lastz_dotplot <- function(
       }
       file2call <- paste0(file2call,"]")
     }
-    
-    #check self
-    if(is.null(file2) & is.null(range2) & is.null(seq2)){
-      ce("Setting self-alignment")
-    }
-    args <- paste0(args," --self")
     
     options(scipen = 0)
     cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot=",tfd," > ",tfo)
@@ -440,6 +425,8 @@ get_lastz_dotplot <- function(
 
 }
 lastz <- get_lastz_dotplot
+alignmentPlot <- get_lastz_dotplot
+
 # get_lastz_dotplot(
 #   file1 = "data/refs/morex_v3_psmols.fasta",
 #   file2 = "data/refs/morex_v3_psmols.fasta",
