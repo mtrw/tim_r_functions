@@ -32,7 +32,39 @@ blastx <- function(
   }
   bcmd <- paste0(blastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
-  fread(cmd = bcmd,col.names=outputColNames)
+  bl <- fread(cmd = bcmd,col.names=outputColNames)
+  if(!is.null(saveFile)){
+    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  bl
+}
+
+#run blastx get a table
+tblastx <- function(
+    ref, #dev ref <- refFile
+    query, #dev query <- qFile
+    tblastxBinary=system("which tblastx",intern=T),
+    makeBlastDbBinary=system("which makeblastdb",intern=T),
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    moreArgs="",
+    numThreads=4,
+    saveFile=NULL
+){
+  require(data.table)
+  if(!file.exists(paste0(ref,".ndb"))){
+    ce("Making nucleotide blastDB for ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
+    ce("\tRunning command: ",mcmd)
+    system(mcmd)
+  }
+  bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  ce("Running command: ",bcmd)
+  bl <- fread(cmd = bcmd,col.names=outputColNames)
+  if(!is.null(saveFile)){
+    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  bl
 }
 
 
@@ -57,7 +89,11 @@ blastn <- function(
   }
   bcmd <- paste0(blastnBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
-  fread(cmd = bcmd,col.names=outputColNames)
+  bl <- fread(cmd = bcmd,col.names=outputColNames)
+  if(!is.null(saveFile)){
+    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  bl
 }
 
 
@@ -219,14 +255,14 @@ get_lastz_dotplot <- function(
   seq2=NULL,
   annot1=NULL,
   annot2=NULL,
-  lastz_binary="/opt/Bio/lastz/1.04.03/bin/lastz",
+  lastz_binary=system("which lastz",intern=T),
   min_length_plot=0,
   save_alignments_to_file=NULL,
   save_dots_to_file=NULL,
   save_exons_to_file_seq1=NULL,
   save_exons_to_file_seq2=NULL,
   plot_from_file=NULL,
-  args="--notransition --step=150 --nogapped",
+  args="",
   plot=T
 ){
 
@@ -426,23 +462,6 @@ get_lastz_dotplot <- function(
 }
 lastz <- get_lastz_dotplot
 alignmentPlot <- get_lastz_dotplot
-
-# get_lastz_dotplot(
-#   file1 = "data/refs/morex_v3_psmols.fasta",
-#   file2 = "data/refs/morex_v3_psmols.fasta",
-#   seq1 = "chr1",
-#   seq2 = "chr5",
-#   range1 = c(100,2345),
-#   range2 = c(57984,59984),
-#   args = "--notransition --step=150 --nogapped", #add any args for lastz you want
-#   save_alignments_to_file=NULL, #give it a filename to save to if you want. if you want to do this, suggest setting the output format argument to lastz
-#   save_dots_to_file=NULL, #give it a filename to save to if you want.
-#   plot_from_file=NULL, #if you've already saved the dots somewhere, give it the file and it will plot directly from that
-#   min_length_plot=500, #min length of an alignment to plot
-#   annot1 = gff1,
-#   annot2 = gff2,
-#   lastz_binary="/opt/Bio/lastz/1.04.03/bin/lastz"
-# )
 
 
 #from http://www.sthda.com/english/wiki/impressive-package-for-3d-and-4d-graph-r-software-and-data-visualization
