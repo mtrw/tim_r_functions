@@ -1,6 +1,5 @@
 
 
-
 plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")  
 for(p in plist){
   if(! p %in% installed.packages()){
@@ -10,6 +9,21 @@ for(p in plist){
 for(p in plist){
   require(p,character.only = T)
 }
+
+#Better than previous maf calculators I made, in that it actually calculates the maf
+minor_allele_frequency <- function(x){
+  ce("Note, this MAF calculator is for literal encoded genotypes. For alt allele counts ... just write your own function dude. Like ... {t<-sum(gt)/(2*.N);min(t,1-t)}")
+  x <- x[!is.na(x)]
+  tbl <- table(x)
+  if(length(tbl)==1){ return(as.numeric(0)) }
+  min <- tbl[order(tbl)][1]
+  as.numeric(min / sum(tbl))
+}
+
+file_nopath_noext <- function(f,newPath="",newExt=""){
+  sub("\\..*","",sub(".*[\\/]","",f)) %>% paste0(newPath,.,newExt)
+}
+
 
 #run blastx get a table
 blastx <- function(
