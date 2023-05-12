@@ -24,6 +24,8 @@ file_nopath_noext <- function(f,newPath="",newExt=""){
   sub("\\..*","",sub(".*[\\/]","",f)) %>% paste0(newPath,.,newExt)
 }
 
+kill <- rm
+calling.env <- parent.frame
 
 #run blastx get a table
 blastx <- function(
@@ -159,7 +161,7 @@ circle <- function(x=0,y=0,rad=1,n_pts=200){
 
 
 
-bedtools_getgc <- function(fasta,bed,bedtools="/opt/Bio/bedtools/2.30.0/bin/bedtools"){
+bedtools_getgc <- function(fasta,bed,bedtools=system("which bedtools")){
   #note start/end in bed coords, ie first base is start=0 end=1
   #note bed requires cols chr start end
   require(data.table)
@@ -224,7 +226,8 @@ bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin=s
   s <- "-s"
   if(stranded==FALSE){s<-"";b[,strand:="+"]}
   if(is.null(b$name)){b[,name:=chr]}
-  of <- if(is.null(outFile)){""} else {paste0(" > ",outFile)}
+  of <- if(is.null(outFile)){""} else { paste0(" >> ",outFile) }
+    
   b[,idx:=1:.N]
   b[,{
     #browser()
