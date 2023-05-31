@@ -115,35 +115,36 @@ blastn <- function(
 # Call a SNP table from blast-like alignment strings (which can be in raw text files[one file per string])
 # Depends on aln_to_vars_filesin_indels, a small C program that does the actual calling and will turn up on my github soon (and could even end up being turned into an Rcpp function, who knows?)
 AlnToVarCalls <- function(
-    seqRef=NULL,
-    seqQuery=NULL,
-    fileRef=NULL, # These files must contain one aligned (dashes-for-gaps) sequence EACH. e.g. fileRef:"AGGTTC-AAA"; fileQuery:"---TTCGAAA"
-    fileQuery=NULL,
+    refSeq=NULL,
+    querySeq=NULL,
+    refFile=NULL, # These files must contain one aligned (dashes-for-gaps) sequence EACH. e.g. refFile:"AGGTTC-AAA"; queryFile:"---TTCGAAA"
+    queryFile=NULL,
     refStart,
     queryStart,
     refOrient=1, #1 or -1
     queryOrient=1,
     callerBin="/home/mrabanuswall/bin/aln_to_vars_filesin_indels"
 ){
-  #dev seqRef="ATGTTC-AGA"; seqQuery="---TTCGAAA"; fileRef=NULL; fileQuery=NULL; refOrient=1; queryOrient=1; refStart=100; queryStart=200; callerBin="/home/mrabanuswall/bin/aln_to_vars_filesin_indels"
+  #dev refSeq="ATGTTC-AGA"; querySeq="---TTCGAAA"; refFile=NULL; queryFile=NULL; refOrient=1; queryOrient=1; refStart=100; queryStart=200; callerBin="/home/mrabanuswall/bin/aln_to_vars_filesin_indels"
   tf <- F
-  if(is.null(fileRef) & is.null(fileQuery)){
-    fileRef <- tempfile(fileext=".seq")
-    writeLines(seqRef,fileRef)
-    fileQuery <- tempfile(fileext=".seq")
-    writeLines(seqQuery,fileQuery)
+  if(is.null(refFile) & is.null(queryFile)){
+    refFile <- tempfile(fileext=".seq")
+    writeLines(refSeq,refFile)
+    queryFile <- tempfile(fileext=".seq")
+    writeLines(querySeq,queryFile)
     tf <- T
   }
   
   tf_out <- tempfile(fileext=".tsv")
-  
-  system(paste0(callerBin," ",refStart," ",refOrient," ",fileRef," ",queryStart," ",queryOrient," ",fileQuery," > ",tf_out))
+  cmd <- paste0(callerBin," ",refStart," ",refOrient," ",refFile," ",queryStart," ",queryOrient," ",queryFile," > ",tf_out)
+  ce("Running command: ",cmd)
+  system(cmd)
   
   out <- fread(tf_out,col.names = c("posRef","posQuery","stateRef","stateQuery"))
   unlink(tf_out)
   if(tf==T){
-    unlink(fileRef)
-    unlink(fileQuery)
+    unlink(refFile)
+    unlink(queryFile)
   }
   out
 }
