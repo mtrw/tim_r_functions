@@ -112,7 +112,41 @@ blastn <- function(
   bl
 }
 
-
+# Call a SNP table from blast-like alignment strings (which can be in raw text files[one file per string])
+# Depends on aln_to_vars_filesin_indels, a small C program that does the actual calling and will turn up on my github soon (and could even end up being turned into an Rcpp function, who knows?)
+AlnToVarCalls <- function(
+    seqRef=NULL,
+    seqQuery=NULL,
+    fileRef=NULL, # These files must contain one aligned (dashes-for-gaps) sequence EACH. e.g. fileRef:"AGGTTC-AAA"; fileQuery:"---TTCGAAA"
+    fileQuery=NULL,
+    refStart,
+    queryStart,
+    refOrient=1, #1 or -1
+    queryOrient=1,
+    callerBin="/home/mrabanuswall/bin/aln_to_vars_filesin_indels"
+){
+  #dev seqRef="ATGTTC-AGA"; seqQuery="---TTCGAAA"; fileRef=NULL; fileQuery=NULL; refOrient=1; queryOrient=1; refStart=100; queryStart=200; callerBin="/home/mrabanuswall/bin/aln_to_vars_filesin_indels"
+  tf <- F
+  if(is.null(fileRef) & is.null(fileQuery)){
+    fileRef <- tempfile(fileext=".seq")
+    writeLines(seqRef,fileRef)
+    fileQuery <- tempfile(fileext=".seq")
+    writeLines(seqQuery,fileQuery)
+    tf <- T
+  }
+  
+  tf_out <- tempfile(fileext=".tsv")
+  
+  system(paste0(callerBin," ",refStart," ",refOrient," ",fileRef," ",queryStart," ",queryOrient," ",fileQuery," > ",tf_out))
+  
+  out <- fread(tf_out,col.names = c("posRef","posQuery","stateRef","stateQuery"))
+  unlink(tf_out)
+  if(tf==T){
+    unlink(fileRef)
+    unlink(fileQuery)
+  }
+  out
+}
 
 
 #q-q plots estimateds from 2 samples. Interpolates so either sample can have diff numbers of items. x2="GWAS" to compare with unif(0,1)
@@ -225,23 +259,23 @@ bedtools_getfasta <- function(fasta,bed_dt,outFile=NULL,stranded=T,bedToolsBin=s
   b <- copy(bed_dt)
   s <- "-s"
   if(stranded==FALSE){s<-"";b[,strand:="+"]}
-  if(is.null(b$name)){b[,name:=chr]}
-  of <- if(is.null(outFile)){""} else { paste0(" >> ",outFile) }
-    
+  if(is.null(b$strand)){b[,strand:="+"]}
+  n <- ""
+  if(!is.null(b$name)){n <- "-name"} else {b[,name:=""]}
+  of <- ""
+  if(!is.null(outFile)){ of <- paste0(" >> ",outFile); if(file.exists(outFile)){unlink(outFile)} }
   b[,idx:=1:.N]
-  b[,{
-    #browser()
+  out <- b[,{
     tf <- tempfile()
     out <- .SD[,.(chr,start,end,name,score=".",strand)]
     write.table(x = out,file=tf,sep = "\t",quote=F,row.names = F,col.names = F)
-    cmd <- paste0(bedToolsBin," getfasta ",s," -name -fi ",fasta," -bed ",tf,of)
+    cmd <- paste0(bedToolsBin," getfasta ",s," ",n," -fi ",fasta," -bed ",tf,of)
     ce("\tRunning command: ",cmd)
     fa <- system( cmd , intern = T )
     unlink(tf)
     .( name=fa[1] , seq=fa[2] )
-  }
-  ,by=idx][,idx:=NULL][]
-  invisible()
+  },by=idx][,idx:=NULL][]
+  if(is.null(outFile)) {return(out)} else {invisible()}
 }
 
 left <- function(x,propframe=0.9){
