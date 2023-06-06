@@ -10,6 +10,55 @@ for(p in plist){
   require(p,character.only = T)
 }
 
+# Give it strings in (e.g.) AAG-AT / A-GCAT format. s1[1] will align with s2[1], etc
+# Coords are simple alignment positions
+# If s2 is NULL, will "multiple align" all s1s
+printAln <- function(s1,s2=NULL){
+  w <- system("echo $RSTUDIO_CONSOLE_WIDTH",intern=T) %>% as.integer
+  
+  if(!is.null(s2)){
+    for(i_Aln in 1:length(s1)){
+    l <- stri_length(s1[i_Aln])
+    cat("Alignment ",i_Aln,":\n")
+      for(i in seq(1,l,by=w)){ 
+        cat("[",i,"]","\n")
+        cat(substr(s1[i_Aln],i,min(i+w,l)),"\n")
+        for(j in i:min(i+w,l)){
+          if(substr(s1[i_Aln],j,j)==substr(s2[i_Aln],j,j)){
+            cat("|")
+          } else {
+            cat(" ")
+          }
+        }
+        cat("\n")
+        cat(substr(s2[i_Aln],i,min(i+w,l)),"\n")
+        cat("\n")
+      }
+    cat("\n\n")  
+    }
+  } else {
+    l <- stri_length(s1[1])
+    for(i in seq(1,l,by=w)){
+      cat("[",i,"] \n")
+      for(i_Aln in 1:(length(s1)-1)){
+        cat(substr(s1[i_Aln],i,min(i+w,l)),"\n")
+        for(j in i:min(i+w,l)){
+          if(substr(s1[i_Aln],j,j)==substr(s1[i_Aln+1],j,j)){
+            cat("|")
+          } else {
+            cat(" ")
+          }
+        }
+        cat("\n")
+      }
+      cat(substr(s1[length(s1)],i,min(i+w,l)),"\n")
+      cat("\n\n")
+    }
+  }
+}
+#printAln(c("aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta"))
+
+
 #Better than previous maf calculators I made, in that it actually calculates the maf
 minor_allele_frequency <- function(x){
   ce("Note, this MAF calculator is for literal encoded genotypes. For alt allele counts ... just write your own function dude. Like ... {t<-sum(gt)/(2*.N);min(t,1-t)}")
