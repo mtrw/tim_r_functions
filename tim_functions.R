@@ -59,6 +59,12 @@ printAln <- function(s1,s2=NULL){
 #printAln(c("aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta"))
 
 
+most_common_thing_count <- function(x){
+  tbl <- table(x)
+  tbl[order(-tbl)][[1]]
+}
+
+
 #Better than previous maf calculators I made, in that it actually calculates the maf
 minor_allele_frequency <- function(x){
   ce("Note, this MAF calculator is for literal encoded genotypes. For alt allele counts ... just write your own function dude. Like ... {t<-sum(gt)/(2*.N);min(t,1-t)}")
@@ -84,9 +90,7 @@ blastx <- function(
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
-    moreArgs="",
-    numThreads=4,
-    saveFile=NULL
+    numThreads=4,?><    saveFile=NULL
 ){
   require(data.table)
   if(!file.exists(paste0(ref,".pdb"))){
