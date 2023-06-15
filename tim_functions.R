@@ -90,7 +90,8 @@ blastx <- function(
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
-    numThreads=4,?><    saveFile=NULL
+    numThreads=4,
+    saveFile=NULL
 ){
   require(data.table)
   if(!file.exists(paste0(ref,".pdb"))){
