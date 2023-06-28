@@ -14,7 +14,7 @@ for(p in plist){
 # Coords are simple alignment positions
 # If s2 is NULL, will "multiple align" all s1s
 printAln <- function(s1,s2=NULL){
-  w <- system("echo $RSTUDIO_CONSOLE_WIDTH",intern=T) %>% as.integer
+  w <- options()$width
   
   if(!is.null(s2)){
     for(i_Aln in 1:length(s1)){
