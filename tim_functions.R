@@ -15,7 +15,6 @@ for(p in plist){
 # If s2 is NULL, will "multiple align" all s1s
 printAln <- function(s1,s2=NULL){
   w <- options()$width
-  
   if(!is.null(s2)){
     for(i_Aln in 1:length(s1)){
     l <- stri_length(s1[i_Aln])
@@ -1509,7 +1508,218 @@ is_na_dist <-function(d){
 
 
 
+# Utility plot funs for swAlign
+plotInit <- function( seq1 , seq2 ){
+  l1 <- length(seq1)
+  l2 <- length(seq2)
+  null_plot(-1:(l1+1),-1:(l2+1),main="S-W alignment",xaxt='n',yaxt='n',bty='n')
+  text(
+    x=(1:l1)+0.5,
+    y=rep(-0.5,l1),
+    labels=seq1,
+  )
+  text(
+    x=rep(-0.5,l2),
+    y=(1:l2)+0.5,
+    labels=seq2,
+  )
+  for(x in 0:l1){
+    for(y in 0:l2){
+      rect(
+        xleft = x,
+        xright = x+1,
+        ybottom = y,
+        ytop = y+1,
+        border = "#000000FF",
+        col = "#00000000"
+      )
+    }
+  }
+}
 
+plotMatchCols <- function( seq1 , seq2 , matchCol = "#00008833" ){
+  l1 <- length(seq1)
+  l2 <- length(seq2)
+  for(x in 1:l1){
+    for(y in 1:l2){
+      if(seq1[x]==seq2[y]){
+        rect(
+          xleft = x,
+          xright = x+1,
+          ybottom = y,
+          ytop = y+1,
+          border = "#000000FF",
+          col = matchCol
+        )
+      }
+    }
+  }
+}
+
+
+plotAddMatchScore <- function( i , j , score ){
+  text( i+0.2 , j+0.8 , score , cex=0.5 )
+}
+
+plotAddMatchScoreEdges <- function( l1 , l2 ){
+  for(x in 0:(l1)){
+    plotAddMatchScore( x , 0 , 0)
+  }
+  for(y in 1:(l2)){
+    plotAddMatchScore( 0 , y , 0)
+  }
+}
+
+plotAddTotalScore <- function( i , j , score ){
+  text( i+0.8 , j+0.8 , score , cex=0.5 , col = "#881105" )
+}
+
+
+plotAddArrow <- function( i , j , orient ){
+  #browser()
+  x1 <- c(.8,.8,.5)[orient+2] # (across,diag,down)
+  y1 <- c(.5,.8,.8)[orient+2]
+  x2 <- c(.2,.2,.5)[orient+2]
+  y2 <- c(.5,.2,.2)[orient+2]
+  arrows(i+x1,j+y1,i+x2,j+y2)
+}
+
+
+# swAlign(
+#   sequence_1 = "TGACTGGACGCGGTTGCCGATGGGAGGCTCGGTGGCTTCATGCAGGGCCAGCGTGCGCGTTGGTTGCGCGTGAT",
+#   sequence_2 = "TGCCTGGACGCGGTTGCCAAAAAAAATGGGAGGCTCGGTGGCCATGCGGGCCAGCGAGCGCGTGTTGCACGTGCT",
+#   plotSteps = T,
+#   printAlignment = T
+# )
+swAlign <- function(sequence_1="ACTG",sequence_2="AATCTG",gapPenalty=5L,match=matrix(nrow=4,ncol=4,c(5,-1,-2,-2,-1,5,-2,-2,-2,-2,8,-1,-2,-2,-1,8),byrow=T),plotSteps=F,printAlignment=T){
+  
+  seq2 <- strsplit(sequence_2,s="") %>% unlist
+  seq1 <- strsplit(sequence_1,s="") %>% unlist
+  
+  s1 <- as.integer(swap(seq1,c("A","T","C","G"),1:4))
+  s2 <- as.integer(swap(seq2,c("A","T","C","G"),1:4))
+  l1 <- length(s1)
+  l2 <- length(s2)
+  topScore <- 0L
+  topScoreI <- 1L
+  topScoreJ <- 1L
+  scoreMat <- matrix(NA_integer_,nrow=l1+1,ncol=l2+1)
+  traceMat <- matrix(NA_integer_,nrow=l1+1,ncol=l2+1) #0 <=> [mis]match (diag); 1 <=> gapI (down); -1 <=> gapJ (across)
+  
+  if(plotSteps==T){
+    wait("Press any key to print grid ... ")
+    plotInit( seq1 , seq2 )
+    
+    wait("Press any key to show matches ... ")
+    plotMatchCols( seq1 , seq2 )
+  }
+  
+  #Initialise
+  scoreMat[1,] <- 0L
+  scoreMat[,1] <- 0L
+  traceMat[1,] <- 0L
+  traceMat[,1] <- 0L
+  #Fill
+  
+  if(plotSteps==T){
+    wait("Press any key to show match scores ... ")
+    l_ply((1:l1),function(i){ #dev i<-2;j<-3
+      l_ply((1:l2),function(j){
+        plotAddMatchScore(i,j,match[s1[i],s2[j]])
+      })
+    })
+    
+    plotAddMatchScoreEdges( l1 , l2 )
+  }
+  
+  
+  if(plotSteps==T){
+    wait("Press to show alignment scores and best directions ...")
+  }
+  for(i in (1:l1)+1){ #dev i<-i;j<-2
+    for(j in (1:l2)+1){
+      
+      #ce(i,"/",j)
+      
+      matchScore <- match[s1[i-1],s2[j-1]]
+      
+      scoreNoGap <- scoreMat[i-1,j-1] + matchScore # "diagonal"
+      scoreGapI  <- scoreMat[i,j-1]   + matchScore - gapPenalty # "up"
+      scoreGapJ  <- scoreMat[i-1,j]   + matchScore - gapPenalty # "across"
+      if( max(scoreNoGap,scoreGapI,scoreGapJ) > 0 ){
+        if        (scoreNoGap>=scoreGapI & scoreNoGap>=scoreGapJ){ # All equal or noGap equal highest (Diagonal)
+          scoreMat[i,j] <- scoreNoGap
+          traceMat[i,j] <- 0L
+        } else if (scoreGapI >= scoreGapJ) {                        # Up
+          scoreMat[i,j] <- scoreGapI
+          traceMat[i,j] <- 1L
+        } else {                                                     # Across
+          scoreMat[i,j] <- scoreGapJ
+          traceMat[i,j] <- -1L
+        }
+      } else {
+        scoreMat[i,j] <- 0L
+      }
+      
+      if(scoreMat[i,j] > topScore){
+        topScore <- scoreMat[i,j]
+        topScoreI <- i
+        topScoreJ <- j
+      }
+      
+      if(plotSteps==T){
+        plotAddTotalScore( i-1 , j-1 , scoreMat[i,j] )
+        plotAddArrow( i-1 , j-1 , traceMat[i,j] )
+      }
+    }
+  }
+  alnScore <- topScore
+  
+  alignMat <- matrix(NA_integer_,nrow=2,ncol=max(l1,l2))
+  alnLength <- 0
+  while(topScore > 0 & topScoreI>0 & topScoreJ>0){
+    alnLength <- alnLength+1
+    if(ncol(alignMat)<alnLength){
+      alignMat <- cbind(alignMat,matrix(NA_integer_,nrow=2,ncol=max(l1,l2)))
+    }
+    #ce("Trace coords: ",topScoreI,"/",topScoreJ)
+    if( traceMat[topScoreI,topScoreJ] == 0 ){
+      topScoreI <- topScoreI-1
+      topScoreJ <- topScoreJ-1
+      alignMat[1,alnLength] <- seq1[topScoreI]
+      alignMat[2,alnLength] <- seq2[topScoreJ]
+    } else if ( traceMat[topScoreI,topScoreJ] == -1 ) {
+      topScoreI <- topScoreI-1
+      alignMat[1,alnLength] <- "-"
+      alignMat[2,alnLength] <- seq2[topScoreJ]
+    } else {
+      topScoreJ <- topScoreJ-1
+      alignMat[1,alnLength] <- seq1[topScoreI]
+      alignMat[2,alnLength] <- "-"
+    }
+    topScore  <- scoreMat[topScoreI,topScoreJ]
+  }
+  
+  alignMat <- alignMat[,1:alnLength]
+  
+  if(printAlignment==T){
+    printAln(
+      s1 = paste0(alignMat[1,],collapse=""),
+      s2 = paste0(alignMat[2,],collapse="")
+    )
+  }
+  
+  list(
+    score=alnScore,
+    rewardMatrix=match,
+    gapPenalty=gapPenalty,
+    scoreMat=scoreMat,
+    traceMat=traceMat,
+    seq1=seq1,
+    seq2=seq2,
+    alignment=alignMat
+  )
+}
 
 
 
