@@ -1722,7 +1722,53 @@ swAlign <- function(sequence_1="ACTG",sequence_2="AATCTG",gapPenalty=5L,match=ma
 }
 
 
+killNA <- function(x){
+  x[!is.na(x)]
+}
 
+killInf <- function(x){
+  x[!is.infinite(x)]
+}
 
+behave <- function(x){
+  x[!is.na(x) & !is.nan(x) & !is.infinite(x)]
+}
 
+#Assumes het frequency in both pops is HWE expectation
+#Works for two populations only currently
+#Takes a simple vector of GTs (any number of alleles > 1) and a list of population assignments (must be 2 currently)
+#FstWC84(sample(LETTERS[1:4],200,r=T),pops=sample(1:2,200,r=T))
+FstWC84 <- function( gts , pops ){
+  
+  #N alleles
+  nA <- nu(gts)
+  if(nA==1){return(NA_real_)}
+  #N pops
+  r <- nu(pops)
+  if(r!=2){stop("Implemented for two pops only currently")}
+  
+  counts <- table(gts,pops)
+  #n[2] <=> samples in pop 2
+  n <- colSums(counts)
+  nBar <- sum(n)/r
+  
+  nc <- ( (r*nBar) - sum(n**2)/(r*nBar) )/(r-1) #Equivalently: nBar*(1-((sd(n)/nBar)**2)/r)
+  
+  #p[2,3] <=> p_ for allele 2 in pop 3 i.e. p_a[3] w/ a==2 
+  p <- apply(counts,2,function(x) x/sum(x))
+  
+  theta <- lapply(1:nA,function(a_i){ #allele index #a_i <-1
+    p_a <- sum( n*p[a_i,] ) / (r*nBar)
+    s2_a <- sum( n*(p[a_i,]-p_a)**2 ) / ((r-1)*nBar)
+    h_a <- sum( n*2*p[a_i,]*(1-p[a_i,]) ) / (r*nBar)
+    a_a <- (nBar/nc) * ( s2_a - (1/(nBar-1))*( (p_a*(1-p_a)) - ((r-1/r)*s2_a) - (0.25*h_a) )  )
+    b_a <- (nBar/(nBar-1)) * (  (p_a*(1-p_a)) - (((r-1)/r)*s2_a) - (((2*nBar-1)/(4*nBar))*h_a)  )
+    c_a <- 0.5*h_a
+    
+    list( a_a , b_a , c_a )
+    
+  }) %>% rbindlist
+  Fst <- sum(theta[,1]) / sum(theta[,1]+theta[,2]+theta[,3])
+  Fst
+}
 
