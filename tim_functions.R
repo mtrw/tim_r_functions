@@ -1734,6 +1734,10 @@ behave <- function(x){
   x[!is.na(x) & !is.nan(x) & !is.infinite(x)]
 }
 
+is.behaved <- function(x){
+  !is.na(x) & !is.nan(x) & !is.infinite(x)
+}
+
 #Assumes het frequency in both pops is HWE expectation
 #Works for two populations only currently
 #Takes a simple vector of GTs (any number of alleles > 1) and a list of population assignments (must be 2 currently)
