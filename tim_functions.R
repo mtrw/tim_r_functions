@@ -1850,19 +1850,8 @@ getVariantContextMSA <- function(variantPos,variantSurround,variantChr,refGenome
   )[,baitSeq:=baitSeq][,baitName:=varName][]
   hom <- findLocusByNtHomology(baitSeqTable)
   # Get MSA
-  coordTable <- hom[,.(fastaFname=refFastaFname,chr=sseqid,start=sstart,end=send)]
+  coordTable <- hom[,.(fastaFname=refFastaFname,chr=sseqid,start=pmin(sstart,send),end=pmax(sstart,send))]
   msaFromLocus(coordTable)
 }
 
-
-variantPos <- 147243
-variantSurround <- 200
-variantChr <- "chr1H"
-refGenomeFname <- "/data/gpfs/projects/punim1869/shared_data/refs/barley_pangenome_2020/assembly/Golden_Promise_pseudomolecule_v1.fasta" #The one variants were called to
-
-targetGenomesFnames <- c( #e.g. the pangenome
-  "/data/gpfs/projects/punim1869/shared_data/refs/morex_v3/assembly/Barley_MorexV3_pseudomolecules.fasta",
-  "/data/gpfs/projects/punim1869/shared_data/refs/Ensembl_Hordeum_vulgare_goldenpromise.GPv1/assembly/Hordeum_vulgare_goldenpromise.GPv1.dna.toplevel_pseudomolecules.fa",
-  "/data/gpfs/projects/punim1869/shared_data/refs/barley_pangenome_2020/assembly/Barke_pseudomolecules_v1.fasta"
-)
 
