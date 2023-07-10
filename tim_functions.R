@@ -85,6 +85,8 @@ calling.env <- parent.frame
 blastx <- function(
     ref, #dev ref <- refFile
     query, #dev query <- qFile
+    stringQueries=NULL,
+    stringQueryNames=NULL,
     blastxBinary=system("which blastx",intern=T),
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
@@ -99,11 +101,22 @@ blastx <- function(
     ce("\tRunning command: ",mcmd)
     system(mcmd)
   }
+  
+  if(!is.null(stringQueries)){
+    query <- tempfile(fileext=".fastp")
+    stopifnot(length(stringQueries)==length(stringQueryNames))
+    l_ply(seq_along(stringQueries),function(i){
+      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
+    })
+  }
   bcmd <- paste0(blastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
   bl <- fread(cmd = bcmd,col.names=outputColNames)
   if(!is.null(saveFile)){
     write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  if(!is.null(stringQueries)){
+    unlink(query)
   }
   bl
 }
@@ -141,6 +154,8 @@ tblastx <- function(
 blastn <- function(
     ref, #dev ref <- refFile
     query, #dev query <- qFile
+    stringQueries=NULL,
+    stringQueryNames=NULL,
     blastnBinary=system("which blastn",intern=T),
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
@@ -156,11 +171,21 @@ blastn <- function(
     ce("\tRunning command: ",mcmd)
     system(mcmd)
   }
+  if(!is.null(stringQueries)){
+    query <- tempfile(fileext=".fasta")
+    stopifnot(length(stringQueries)==length(stringQueryNames))
+    l_ply(seq_along(stringQueries),function(i){
+      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
+    })
+  }
   bcmd <- paste0(blastnBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
   bl <- fread(cmd = bcmd,col.names=outputColNames)
   if(!is.null(saveFile)){
     write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  if(!is.null(stringQueries)){
+    unlink(query)
   }
   bl
 }
@@ -1775,4 +1800,69 @@ FstWC84 <- function( gts , pops ){
   Fst <- sum(theta[,1]) / sum(theta[,1]+theta[,2]+theta[,3])
   Fst
 }
+
+
+
+
+
+msaFromLocus <- function(coordsTable){
+  require(msa)
+  require(seqinr)
+  stopifnot(!is.null(coordsTable$fastaFname) & !is.null(coordsTable$chr) & !is.null(coordsTable$start) & !is.null(coordsTable$end))
+  coordsTable <- copy(coordsTable)[,idx:=1:.N][,start:=start-1]
+  coordsTable[, seq:=bedtools_getfasta(fasta=fastaFname,bed_dt=.SD,stranded=F,outFile=NULL)$seq,by=.(idx)]
+  coordsTable$aligned <-
+  (coordsTable$seq %>%
+    DNAStringSet() %>%
+    msa(method = "ClustalOmega",order="input") %>%
+    msaConvert(type = "seqinr::alignment"))$seq
+  coordsTable[,idx:=NULL][]
+}
+
+
+
+findLocusByNtHomology <- function(baitSeqTable,evalueCutoff=Inf){
+  stopifnot(!is.null(baitSeqTable$baitSeq) & !is.null(baitSeqTable$refFastaFname) & !is.null(baitSeqTable$baitName))
+  baitSeqTable <- copy(baitSeqTable)
+  baitSeqTable[,{
+    bl <- blastn(ref=refFastaFname,stringQueries=baitSeq,stringQueryNames=baitName)
+    #browser()
+    if(nrow(bl)==0){
+      NULL
+    } else {
+      bl[evalue<=evalueCutoff,.SD[order(evalue)][1][,.(sseqid,sstart,send)],by=.(qseqid)][,refFastaFname:=refFastaFname]
+    }
+  },by=.(refFastaFname)]
+}
+
+
+
+
+getVariantContextMSA <- function(variantPos,variantSurround,variantChr,refGenomeFname,targetGenomesFnames){
+  # Varname
+  varName <- paste0("Var_",variantChr,":",variantPos)
+  # Get sequence surrounding the target variant
+  bed_dt <- data.table(chr=variantChr,start=variantPos-variantSurround-1,end=variantPos+variantSurround)
+  baitSeq <- bedtools_getfasta(refGenomeFname,bed_dt=bed_dt)$seq
+  # Homology search across targetGenomes, retrieving best hits (if any)
+  baitSeqTable <- data.table(
+    refFastaFname=targetGenomesFnames
+  )[,baitSeq:=baitSeq][,baitName:=varName][]
+  hom <- findLocusByNtHomology(baitSeqTable)
+  # Get MSA
+  coordTable <- hom[,.(fastaFname=refFastaFname,chr=sseqid,start=sstart,end=send)]
+  msaFromLocus(coordTable)
+}
+
+
+variantPos <- 147243
+variantSurround <- 200
+variantChr <- "chr1H"
+refGenomeFname <- "/data/gpfs/projects/punim1869/shared_data/refs/barley_pangenome_2020/assembly/Golden_Promise_pseudomolecule_v1.fasta" #The one variants were called to
+
+targetGenomesFnames <- c( #e.g. the pangenome
+  "/data/gpfs/projects/punim1869/shared_data/refs/morex_v3/assembly/Barley_MorexV3_pseudomolecules.fasta",
+  "/data/gpfs/projects/punim1869/shared_data/refs/Ensembl_Hordeum_vulgare_goldenpromise.GPv1/assembly/Hordeum_vulgare_goldenpromise.GPv1.dna.toplevel_pseudomolecules.fa",
+  "/data/gpfs/projects/punim1869/shared_data/refs/barley_pangenome_2020/assembly/Barke_pseudomolecules_v1.fasta"
+)
 
