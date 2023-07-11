@@ -1830,7 +1830,7 @@ findLocusByNtHomology <- function(baitSeqTable,evalueCutoff=Inf){
     if(nrow(bl)==0){
       NULL
     } else {
-      bl[evalue<=evalueCutoff,.SD[order(evalue)][1][,.(sseqid,sstart,send)],by=.(qseqid)][,refFastaFname:=refFastaFname]
+      bl[evalue<=evalueCutoff,.SD[order(evalue)][1][,.(sseqid=as.character(sseqid),sstart=as.integer(sstart),send=as.integer(send))],by=.(qseqid=as.character(qseqid))][,refFastaFname:=refFastaFname]
     }
   },by=.(refFastaFname)]
 }
