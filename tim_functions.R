@@ -426,7 +426,7 @@ get_lastz_dotplot <- function(
     }
     
     options(scipen = 0)
-    cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot=",tfd," > ",tfo)
+    cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot+score=",tfd," > ",tfo)
     #system(paste("cat",tf1))
     #system(paste("cat",tf2))
     ce("Running command: ",cmd)
@@ -442,14 +442,16 @@ get_lastz_dotplot <- function(
       ce("Dots saved as ",save_dots_to_file," in ",getwd())
     }
 
+    #browser()
+    
     if(!is.null(seq1)){ unlink(tf1) }
     if(!is.null(seq2)){ unlink(tf2) }
     unlink(tfo)
-    dp <- fread(tfd,header=T,col.names=c("s1","s2"))
+    dp <- fread(tfd,header=T,col.names=c("s1","s2","score"))
     if(file.exists(tfd)) { unlink(tfd) }
   } else {
     tfd <- plot_from_file
-    dp <- fread(tfd,header=T,col.names=c("s1","s2"))
+    dp <- fread(tfd,header=T,col.names=c("s1","s2","score"))
   }
   
   if(nrow(dp)==0){
@@ -1855,3 +1857,11 @@ getVariantContextMSA <- function(variantPos,variantSurround,variantChr,refGenome
 }
 
 
+
+
+# Normalised hamming
+seqCmp <- function(seq1,seq2,range1=c(1,stri_length(seq1)),range2=c(1,stri_length(seq2))){
+  require(DescTools)
+  StrDist(substr(seq1,start=range1[1],stop=range1[2]),substr(seq2,start=range2[1],stop=range2[2]),method="hamming") / (range1[2]-range1[1]+1)
+}
+#seqCmp(seq1="asdgasd",seq2="asjdhod",range1=c(1,3),range2=c(5,7))
