@@ -17,8 +17,8 @@ printAln <- function(s1,s2=NULL){
   w <- options()$width
   if(!is.null(s2)){
     for(i_Aln in 1:length(s1)){
-    l <- stri_length(s1[i_Aln])
-    cat("Alignment ",i_Aln,":\n")
+      l <- stri_length(s1[i_Aln])
+      cat("Alignment ",i_Aln,":\n")
       for(i in seq(1,l,by=w)){ 
         cat("[",i,"]","\n")
         cat(substr(s1[i_Aln],i,min(i+w,l)),"\n")
@@ -33,7 +33,7 @@ printAln <- function(s1,s2=NULL){
         cat(substr(s2[i_Aln],i,min(i+w,l)),"\n")
         cat("\n")
       }
-    cat("\n\n")  
+      cat("\n\n")  
     }
   } else {
     l <- stri_length(s1[1])
@@ -186,6 +186,8 @@ blastn <- function(
   }
   if(!is.null(stringQueries)){
     unlink(query)
+  } else {
+    bl[,subjectFname:=ref][]
   }
   bl
 }
@@ -377,34 +379,34 @@ bottom <- function(x,propframe=0.9){
 
 
 get_lastz_dotplot <- function(
-  file1=NULL,
-  file2=NULL,
-  range1=NULL,
-  range2=NULL,
-  seq1=NULL,
-  seq2=NULL,
-  annot1=NULL,
-  annot2=NULL,
-  lastz_binary=system("which lastz",intern=T),
-  min_length_plot=0,
-  save_alignments_to_file=NULL,
-  save_dots_to_file=NULL,
-  save_exons_to_file_seq1=NULL,
-  save_exons_to_file_seq2=NULL,
-  plot_from_file=NULL,
-  args="",
-  plot=T
+    file1=NULL,
+    file2=NULL,
+    range1=NULL,
+    range2=NULL,
+    seq1=NULL,
+    seq2=NULL,
+    annot1=NULL,
+    annot2=NULL,
+    lastz_binary=system("which lastz",intern=T),
+    min_length_plot=0,
+    save_alignments_to_file=NULL,
+    save_dots_to_file=NULL,
+    save_exons_to_file_seq1=NULL,
+    save_exons_to_file_seq2=NULL,
+    plot_from_file=NULL,
+    args="",
+    plot=T
 ){
-
+  
   stopifnot(is.null(plot_from_file) | is.character(plot_from_file))
   if(is.null(plot_from_file)){ #we need to make the alignments
-
+    
     tfo <- tempfile() #output (alignment)
     tfd <- tempfile() #output (dotplot info)
-
+    
     file1call <- file1
     file2call <- file2
-
+    
     options(scipen = 999)
     if(!is.null(seq1)){
       tf1 <- tempfile()
@@ -431,17 +433,17 @@ get_lastz_dotplot <- function(
     #system(paste("cat",tf2))
     ce("Running command: ",cmd)
     system(cmd)
-
+    
     if(!is.null(save_alignments_to_file)){
       file.copy(tfo,save_alignments_to_file)
       ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
     }
-
+    
     if(!is.null(save_dots_to_file)){
       file.copy(tfd,save_dots_to_file)
       ce("Dots saved as ",save_dots_to_file," in ",getwd())
     }
-
+    
     #browser()
     
     if(!is.null(seq1)){ unlink(tf1) }
@@ -471,24 +473,24 @@ get_lastz_dotplot <- function(
   dp <- dp[l>=min_length_plot]
   dp[l!=max(l) & idx!=0,c:=replace_scale_with_colours(-log(l))] #,fun="sequential_hcl",palette="Reds 3"
   dp[l==max(l) & idx!=0,c:="#000000"]
-
+  
   seq1descript <- paste0(file1,"\n",seq1," :: [ ",range1[1]," .. ",range1[2]," ]")
   seq2descript <- paste0(file2,"\n",seq2," :: [ ",range2[1]," .. ",range2[2]," ]")
-
+  
   if(plot==F){
     return()
   }
-
+  
   #dev.off()
   par(mar=c(5,5,2,2))
-
+  
   null_plot(
     x=dp$s1,
     y=dp$s2,
     xlab=seq1descript,
     ylab=seq2descript
   )
-
+  
   l_ply(seq(from=1,length.out=nrow(dp)/3,by=3),function(i){
     lines(
       x=dp[i:(i+2),s1],
@@ -497,7 +499,7 @@ get_lastz_dotplot <- function(
       lwd=1
     )
   })
-
+  
   if(!is.null(annot1)){
     fannot1 <- annot1[seqname==seq1 & feature=="exon" & ((end %between% range(dp$s1,na.rm=T)) | (start %between% range(dp$s1,na.rm=T))) ]
     ce("Annotation for ",seq1)
@@ -505,16 +507,16 @@ get_lastz_dotplot <- function(
     if(!is.null(save_exons_to_file_seq1)){
       write.csv(fannot1,save_exons_to_file_seq1,row.names=F)
     }
-
+    
     if (nrow(fannot1)>0){
-
+      
       if(is.null(annot1$col)){
         fannot1[,col:="#f02222"]
       }
       if(is.null(annot1$linecol)){
         fannot1[,linecol:="#f0222211"]
       }
-
+      
       fannot1[,idx:=1:.N]
       pannot1 <- fannot1[,{
         data.table(
@@ -525,7 +527,7 @@ get_lastz_dotplot <- function(
         )
       },by="idx"]
       pannot1[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
-
+      
       l_ply(seq(from=1,length.out=nrow(pannot1)/3,by=3),function(i){
         lines(
           x=pannot1[i:(i+2),x],
@@ -535,7 +537,7 @@ get_lastz_dotplot <- function(
           lend="butt"
         )
       })
-
+      
       abline(
         v=pannot1[!is.na(x),x],
         col=pannot1[!is.na(x),lc],
@@ -543,7 +545,7 @@ get_lastz_dotplot <- function(
       )
     }
   }
-
+  
   if(!is.null(annot2)){
     fannot2 <- annot2[seqname==seq2 & feature=="exon" & ((end %between% range(dp$s2,na.rm=T)) | (start %between% range(dp$s2,na.rm=T))) ]
     ce("Annotation for ",seq2)
@@ -551,16 +553,16 @@ get_lastz_dotplot <- function(
     if(!is.null(save_exons_to_file_seq2)){
       write.csv(fannot2,save_exons_to_file_seq2,row.names=F)
     }
-
+    
     if (nrow(fannot2)>0){
-
+      
       if(is.null(annot2$col)){
         fannot2[,col:="#f02222"]
       }
       if(is.null(annot2$linecol)){
         fannot2[,linecol:="#f0222211"]
       }
-
+      
       fannot2[,idx:=1:.N]
       pannot2 <- fannot2[,{
         data.table(
@@ -571,7 +573,7 @@ get_lastz_dotplot <- function(
         )
       },by="idx"]
       pannot2[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
-
+      
       l_ply(seq(from=1,length.out=nrow(pannot2)/3,by=3),function(i){
         lines(
           x=pannot2[i:(i+2),x],
@@ -581,7 +583,7 @@ get_lastz_dotplot <- function(
           lend="butt"
         )
       })
-
+      
       abline(
         h=pannot2[!is.na(x),y],
         col=pannot2[!is.na(x),lc],
@@ -589,8 +591,8 @@ get_lastz_dotplot <- function(
       )
     }
   }
-
-
+  
+  
 }
 lastz <- get_lastz_dotplot
 alignmentPlot <- get_lastz_dotplot
@@ -611,8 +613,8 @@ scatter3D_fancy <- function(x, y, z, ... )
 
 
 #basically for assigning multiple captures in \\1 \\2 etc in data.table calls like dt[ , c("var1","var2") := .( sub_capturevec("(\\d)_(.*)(\\d+)$",colname,3)]
-    #nmatch is needed
-    #NEEDS WORK
+#nmatch is needed
+#NEEDS WORK
 # sub_capturevec <- function(pattern,string,nmatch){
 #   sapply(string,function(st){
 #     while( length(grep((sep <- paste0(":",sample(1:1e6,1),":")),st))>0 ){}
@@ -637,7 +639,7 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
   x[is.na(x)] <- "NA"
   tbl <- table(x)
   Ma <- names(tbl[order(-tbl)])[1]
-
+  
   if (length(tbl)==1){
     as(Ma,class(x))
   }
@@ -715,7 +717,7 @@ minor_allele <- function(x){
 }
 
 #great when reading in JPGs, which are often three arrays giving the r g b .. to plot in base
-  #rgb is a three item vector
+#rgb is a three item vector
 rgb2hex <- function(rgb) sprintf('#%s',paste(as.hexmode(rgb),collapse = ''))
 
 #I hate those empty dots base plot defaults to
@@ -776,8 +778,8 @@ extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min
   if((is.null(min_sd) & is.null(min_abs)) | (!is.null(min_sd) & !is.null(min_abs))){ stop("Must give one of min_abs and min_sd") } else if (!is.null(min_abs)){min<-min_abs} else if (!is.null(min_sd)){min<-min_sd}
   if(is.null(d_from)){d_from <- min(vec)-binsize}
   if(is.null(d_to)){d_to <- max(vec)+binsize}
-
-
+  
+  
   if(!is.null(n_bins)) {
     binsize <- diff(range(vec))/n_bins
     d <- density(vec,bw=bandwidth,n=n_bins+2,from=d_from,to=d_to,...)
@@ -789,8 +791,8 @@ extract_regions_density <- function(vec,bandwidth=NULL,min_sd=0,min_abs=NULL,min
     plot(d$x,d$y,type="l")
     abline(h = min)
   }
-
-
+  
+  
   filter <- d$y<min #TRUE means it's too low and should be filtered
   r <- rle(filter)
   r$values[r$values==TRUE & r$lengths<min_run_length] <- FALSE
@@ -1078,12 +1080,12 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
     points_x <- points_y
     rm(points_y)
   }
-
+  
   len <- length(x)
   if(len!=length(y) | len<2){
     stop("x and y must be equal lengths of at least 2.")
   }
-
+  
   o_x <- order(x)
   o_y <- order(y)
   if((length(o_x != o_y))<0){
@@ -1091,7 +1093,7 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
   }
   x <- x[o_x]
   y <- y[o_x]
-
+  
   out <- lapply(points_x,function(pt_x){
     #it hits an exact point
     if(length(xeq <- which(x==pt_x))==1){
@@ -1100,7 +1102,7 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
       warning("WARNING: Falls within run of identical x-values. Estimating by mean(y).")
       mean(y[xeq])
     } else if(pt_x>max(x)){
-        warning("WARNING: Extrapolating at high end.")
+      warning("WARNING: Extrapolating at high end.")
       if((x[len]-x[len-1])==0){
         warning("WARNING: Falls beyond run of identical x-values. Estimating by mean(y).")
         mean(y[x==x[len]])
@@ -1113,8 +1115,8 @@ interpolate <- function( x , y , points_x=NULL , points_y=NULL  ){
         warning("WARNING: Falls before run of identical x-values. Estimating by mean(y).")
         mean(y[x==x[1]])
       } else {
-          y[1] + (pt_x-x[1])*( (y[2]-y[1])/(x[2]-x[1]) )
-        }
+        y[1] + (pt_x-x[1])*( (y[2]-y[1])/(x[2]-x[1]) )
+      }
     } else {
       nearest_under_idx <- last(which(x<pt_x))
       y[nearest_under_idx] + (pt_x-x[nearest_under_idx])*( (y[nearest_under_idx+1]-y[nearest_under_idx])/(x[nearest_under_idx+1]-x[nearest_under_idx]) )
@@ -1177,7 +1179,7 @@ u <- function(...){
 #a simple ggplot theme
 reduced_l <- theme(
   axis.line = element_line(colour = "black"),
-
+  
   panel.grid.major = element_line(linewidth=.1 , colour = "grey"),
   panel.grid.minor = element_blank(),
   panel.background = element_rect( fill = "transparent", colour = "black"),
@@ -1197,17 +1199,17 @@ violin_plot <- function(x,y,mean=F,...){
   setkey(data,data_x)
   #calculte densities for violin plot
   violin_data <- data[ , .(density=.(density(data_y))) , by=.(data_x) ]
-
+  
   #calculate how wide to plot violins
   violin_width <- data[ order(data_x) , {s <- data_x %>% unique %>% diff %>% summary; s[[4]]*0.4} , ]
-
+  
   #set up plot
   plot(NULL,xlim=range(data$data_x),ylim=range(data$data_y),xlab=NA,ylab=NA)
-
+  
   #plot mean as a line
   if(mean==T) { data[ , .(mean_y = mean(data_y)) , by=.(data_x) ][, lines(data_x,mean_y) ] }
-
-
+  
+  
   #plot points and violins
   l_ply( unique(data$data_x) , function(x) {
     #points
@@ -1216,7 +1218,7 @@ violin_plot <- function(x,y,mean=F,...){
     d <- violin_data[data_x==x]$density[[1]]
     #scale_by <- violin_width/max(d$y)
     scale_by <- violin_width/max(d$y)
-
+    
     lines(x+d$y*scale_by,d$x,cex=.2)
     lines(x-d$y*scale_by,d$x,cex=.2)
   })
@@ -1255,12 +1257,12 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
   nwheel <- length(setting)
   message_vec <- strsplit(message,"")[[1]]
   if(any(! message_vec %in% alphabet)){ stop("Illegal characters in message. Change alphabet (to \"ascii\"?) or message.") }
-
+  
   #store the wheel settings in enigma. Each wheel is represented twice (once for forwards and once for backwards traversal)
   wheels <- matrix(rep(1:nsymbols,nwheel),ncol=nwheel) #define enigma here, and set "reverse" mappings by rotating them backwards
   cap <- nsymbols:1 #any mapping that always swaps entries! (i.e pos3 == 4 => pos4 == 3). This solution is just an easy option (besides the trivial 1:nsymbols, which makes a symmetrical mapping on either side of the cap and doesn't actually encode your message)
   enigma <- cbind(wheels,cap,wheels)
-
+  
   #instructions are given per wheel, but it changes all columns as it should
   .rotate <- function(col,progress){
     col <- c( col , (2*nwheel+2)-col )
@@ -1273,10 +1275,10 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
       enigma[,c] <<- enigma[ c((p+1):nsymbols,0:(p)) , c ]
     })
   }
-
+  
   #rotate to initial settings
   .rotate(1:nwheel,sapply(setting,function(s) which(alphabet==s))-1)
-
+  
   .keystrike <- function(key){
     k <- which(alphabet==key)
     for(i in 1:ncol(enigma)){
@@ -1284,12 +1286,12 @@ enigma_machine <- function(message,setting=NULL,alphabet="standard"){
     }
     alphabet[k]
   }
-
+  
   #to turn the wheels as the [en|de]coding takes place
   intervals <- nsymbols**(0:(nwheel-1))
-
+  
   encoded <- character()
-
+  
   #run the machine
   for( i in 1:length(message_vec) ){
     char <- message_vec[i]
@@ -1371,11 +1373,11 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
   data <- copy(data)
   if(is.null(data$track_number)) {data$track_number=swap(data$track,sort(unique(data$track)),1:nu(data$track)) %>% as.numeric}
   x_lims <- range(data[,c(start,end)])+c(-sd(data[,pmean(start,end)]*0.2),sd(data[,pmean(start,end)])*0.2)
-
+  
   #track lines
   tl <- data[,.N,by=.(track)][,N:=NULL][]
   tl <- data.table::rbindlist(list(copy(tl[,pos:=x_lims[1]][]),copy(tl[,pos:=x_lims[2]])))
-
+  
   #connectors
   data[,idx:=1:.N]
   cl <- melt( data , measure.vars=c("start","end") , id.vars=c("idx","object_id","track","track_number") , variable.name="start_end" , value.name="pos" )
@@ -1384,18 +1386,18 @@ plot_tracks <- function(data,pos_name = "Position",score1_name = "Score 1",score
     c2 <- copy(cl[track_number==toptrack+1]); setnames(c2,c("idx","track","track_number","pos"),c("idx2","track2","track_number2","pos2"))
     c2[c1,on=.(object_id,start_end),allow.cartesian=T,nomatch=0]
   }) %>% data.table::rbindlist()
-
-
+  
+  
   # p <- ggplot() +
   #   geom_line(data=tl[] , aes(x=pos,y=track,group=track) , size=2 , colour="#bec5d1" ) + #track lines
   #   geom_segment(data=data , aes(x=start,xend=end,y=track,yend=track,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
   #   xlab(pos_name)
-
+  
   p <- ggplot() +
     geom_line(data=tl[] , aes(x=pos,y=track_number,group=track_number) , size=2 , colour="#bec5d1" ) + #track lines
     geom_segment(data=data , aes(x=start,xend=end,y=track_number,yend=track_number,colour=object_id), arrow=arrow(length=unit(0.2, "cm"))) +#objects
     xlab(pos_name)
-
+  
   if(lines==TRUE){ p <- p + geom_segment(data=plotcl , aes(x=pos,xend=pos2,y=track_number,yend=track2) , alpha=0.3 , size=0.2) }
   p
 }
@@ -1434,7 +1436,7 @@ home_office <- function(){
     "Correspond about",
     "Compare"
   )
-
+  
   nouns <- c(
     "files",
     "documents",
@@ -1452,7 +1454,7 @@ home_office <- function(){
     "issues",
     "ideas"
   )
-
+  
   pronouns <- c(
     "for",
     "to do with",
@@ -1461,7 +1463,7 @@ home_office <- function(){
     "about",
     "as part of"
   )
-
+  
   adjective <- c(
     "ongoing",
     "completed",
@@ -1470,7 +1472,7 @@ home_office <- function(){
     "complex",
     "expedited"
   )
-
+  
   effort_nouns <- c(
     "European project",
     "demography paper",
@@ -1489,8 +1491,8 @@ home_office <- function(){
     "measurement acquisition",
     "data harvesting"
   )
-
-
+  
+  
   v <- sapply(1:500,function(i) {
     paste0(
       sample(verbs,1)," ",
@@ -1814,10 +1816,10 @@ msaFromLocus <- function(coordsTable){
   coordsTable <- copy(coordsTable)[,idx:=1:.N][,start:=start-1]
   coordsTable[, seq:=bedtools_getfasta(fasta=fastaFname,bed_dt=.SD,stranded=F,outFile=NULL)$seq,by=.(idx)]
   coordsTable$aligned <-
-  (coordsTable$seq %>%
-    DNAStringSet() %>%
-    msa(method = "ClustalOmega",order="input") %>%
-    msaConvert(type = "seqinr::alignment"))$seq
+    (coordsTable$seq %>%
+       DNAStringSet() %>%
+       msa(method = "ClustalOmega",order="input") %>%
+       msaConvert(type = "seqinr::alignment"))$seq
   coordsTable[,idx:=NULL][]
 }
 
