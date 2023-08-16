@@ -378,223 +378,514 @@ bottom <- function(x,propframe=0.9){
 }
 
 
-get_lastz_dotplot <- function(
-    file1=NULL,
-    file2=NULL,
-    range1=NULL,
-    range2=NULL,
-    seq1=NULL,
-    seq2=NULL,
-    annot1=NULL,
-    annot2=NULL,
+# Export to tim_functions
+lastz <- function(
+    subjectFile=NULL,
+    queryFile=NULL,
+    subjectRange=NULL,
+    queryRange=NULL,
+    subjectSeq=NULL,
+    querySeq=NULL,
+    queryLiterals=NULL,
+    subjectLiteral=NULL,
+    queryLiteralNames=NULL,
+    subjectLiteralName=NULL,
     lastz_binary=system("which lastz",intern=T),
-    min_length_plot=0,
     save_alignments_to_file=NULL,
     save_dots_to_file=NULL,
-    save_exons_to_file_seq1=NULL,
-    save_exons_to_file_seq2=NULL,
-    plot_from_file=NULL,
-    args="",
-    plot=T
+    args="--gfextend --nochain --gapped"
 ){
   
-  stopifnot(is.null(plot_from_file) | is.character(plot_from_file))
-  if(is.null(plot_from_file)){ #we need to make the alignments
-    
-    tfo <- tempfile() #output (alignment)
-    tfd <- tempfile() #output (dotplot info)
-    
-    file1call <- file1
-    file2call <- file2
-    
-    options(scipen = 999)
-    if(!is.null(seq1)){
-      tf1 <- tempfile()
-      writeLines(seq1,tf1)
-      file1call <- paste0(file1call,"[subset=",tf1)
-      if(!is.null(range1)){
-        file1call <- paste0(file1call,",",round(range1[1]),"..",round(range1[2]))
-      }
-      file1call <- paste0(file1call,"]")
-    }
-    if(!is.null(seq2)){
-      tf2 <- tempfile()
-      writeLines(seq2,tf2)
-      file2call <- paste0(file2call,"[subset=",tf2)
-      if(!is.null(range2)){
-        file2call <- paste0(file2call,",",round(range2[1]),"..",round(range2[2]))
-      }
-      file2call <- paste0(file2call,"]")
-    }
-    
-    options(scipen = 0)
-    cmd <- paste0(lastz_binary," ",file1call," ",file2call," ",args," --rdotplot+score=",tfd," > ",tfo)
-    #system(paste("cat",tf1))
-    #system(paste("cat",tf2))
-    ce("Running command: ",cmd)
-    system(cmd)
-    
-    if(!is.null(save_alignments_to_file)){
-      file.copy(tfo,save_alignments_to_file)
-      ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
-    }
-    
-    if(!is.null(save_dots_to_file)){
-      file.copy(tfd,save_dots_to_file)
-      ce("Dots saved as ",save_dots_to_file," in ",getwd())
-    }
-    
-    #browser()
-    
-    if(!is.null(seq1)){ unlink(tf1) }
-    if(!is.null(seq2)){ unlink(tf2) }
-    unlink(tfo)
-    dp <- fread(tfd,header=T,col.names=c("s1","s2","score"))
-    if(file.exists(tfd)) { unlink(tfd) }
+  tfo <- tempfile() #output (alignment)
+  tfd <- tempfile() #output (dotplot info)
+  
+  if(is.null(subjectLiteral)){
+    subjectFileCall <- subjectFile
+    queryFileCall <- queryFile
   } else {
-    tfd <- plot_from_file
-    dp <- fread(tfd,header=T,col.names=c("s1","s2","score"))
+    subjectFileCall <- tempfile(fileext=".fasta")
+    for(i in seq_along(subjectLiteralName)){
+      write(paste0(">",subjectLiteralName[i],"\n",subjectLiteral[i]),subjectFileCall,append=T)
+    }
+    queryFileCall <- tempfile(fileext=".fasta")
+    for(i in seq_along(queryLiterals)){
+      write(paste0(">",queryLiteralNames[i],"\n",queryLiterals[i]),queryFileCall,append=T)
+    }
   }
+  
+  
+  options(scipen = 999)
+  if(!is.null(subjectSeq)){
+    tf1 <- tempfile()
+    writeLines(subjectSeq,tf1)
+    subjectFileCall <- paste0(subjectFileCall,"[subset=",tf1)
+    if(!is.null(subjectRange)){
+      subjectFileCall <- paste0(subjectFileCall,",",round(subjectRange[1]),"..",round(subjectRange[2]))
+    }
+    subjectFileCall <- paste0(subjectFileCall,"]")
+  }
+  if(!is.null(querySeq)){
+    tf2 <- tempfile()
+    writeLines(querySeq,tf2)
+    queryFileCall <- paste0(queryFileCall,"[subset=",tf2)
+    if(!is.null(queryRange)){
+      queryFileCall <- paste0(queryFileCall,",",round(queryRange[1]),"..",round(queryRange[2]))
+    }
+    queryFileCall <- paste0(queryFileCall,"]")
+  }
+  
+  options(scipen = 0)
+  cmd <- paste0(lastz_binary," ",subjectFileCall," ",queryFileCall," ",args," --format=general:name1,start1,end1,size1,name2,start2,end2,size2,strand2,score,cov%,id%,blastid%,text1,text2 --rdotplot+score=",tfd," > ",tfo)
+  ce("Running command: ",cmd)
+  system(cmd)
+  
+  if(!is.null(save_alignments_to_file)){
+    file.copy(tfo,save_alignments_to_file)
+    ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
+  }
+  
+  if(!is.null(save_dots_to_file)){
+    file.copy(tfd,save_dots_to_file)
+    ce("Dots saved as ",save_dots_to_file," in ",getwd())
+  }
+  
+  if(!is.null(subjectSeq)){ unlink(tf1) }
+  if(!is.null(querySeq)){ unlink(tf2) }
+  
+  ap <- fread(tfo,header=T,col.names=c("sseqid","sstart","send","slength","qseqid","qstart","qend","qlength","strand","score","prCoverage","prIdGapless","prIdInclGaps","sAln","qAln"))
+  ap[,prCoverage:=sub("%","",prCoverage)%>%as.numeric%>%`/`(100)]
+  ap[,prIdGapless:=sub("%","",prIdGapless)%>%as.numeric%>%`/`(100)]
+  ap[,prIdInclGaps:=sub("%","",prIdInclGaps)%>%as.numeric%>%`/`(100)]
+  ap[,sstart:=sstart%>%as.numeric]
+  ap[,send:=send%>%as.numeric]
+  ap[,slength:=slength%>%as.numeric]
+  ap[,qstart:=qstart%>%as.numeric]
+  ap[,qend:=qend%>%as.numeric]
+  ap[,qlength:=qlength%>%as.numeric]
+  ap[,score:=score%>%as.integer]
+  ap[,prCoverage:=prCoverage%>%as.numeric]
+  ap[,prIdInclGaps:=prIdInclGaps%>%as.numeric]
+  
+  dp <- fread(tfd,header=T,col.names=c("spos","qpos","score"))
+  dp[,sseqid:=ap$sseqid[1]]
+  queryTbl <- data.table(qseqid=unique(ap$qseqid))[,idx:=0:(.N-1)][]
+  dp <- dp[,idx:=cumsum((score=="score") %>% na.replace(FALSE))][queryTbl,on="idx"][,idx:=NULL][][na.replace(score!="score",TRUE)][]
+  
+  if(file.exists(tfd)) { unlink(tfd) }
+  if(file.exists(tfo)) { unlink(tfo) }
   
   if(nrow(dp)==0){
     ce("No alignments detected ...")
-    return()
+    ap <- data.table(sseqid=character(),sstart=numeric(),send=numeric(),slength=numeric(),qseqid=character(),qstart=numeric(),qend=numeric(),qlength=numeric(),strand=character(),score=integer(),prCoverage=numeric(),prIdGapless=numeric(),prIdInclGaps=numeric(),sAln=character(),qAln=character())
+    dp <- data.table(sseqid=character(),qseqid=character(),spos=numeric(),qpos=numeric(),score=integer())
   }
   
-  suppressWarnings(dp[,s1:=as.numeric(s1)])
-  suppressWarnings(dp[,s2:=as.numeric(s2)])
-  dp[,idx:=(1:.N)%%3]
-  #dev dp <- dp[1:54]
-  abs(dp[idx==2,s1]-dp[idx==1,s1]) -> l1_
-  abs(dp[idx==2,s2]-dp[idx==1,s2]) -> l2_
-  dp[,l1:=rep(l1_,each=3)]
-  dp[,l2:=rep(l2_,each=3)]
-  dp[,l:=pmax(l1,l2)]
-  dp <- dp[l>=min_length_plot]
-  dp[l!=max(l) & idx!=0,c:=replace_scale_with_colours(-log(l))] #,fun="sequential_hcl",palette="Reds 3"
-  dp[l==max(l) & idx!=0,c:="#000000"]
-  
-  seq1descript <- paste0(file1,"\n",seq1," :: [ ",range1[1]," .. ",range1[2]," ]")
-  seq2descript <- paste0(file2,"\n",seq2," :: [ ",range2[1]," .. ",range2[2]," ]")
-  
-  if(plot==F){
-    return()
+  list(aln=ap,dots=dp)
+}
+
+
+
+round2dp <- function(x){
+  round(x,digits = 2)
+}
+
+
+circle_seg <- function(
+    x=0,
+    y=0,
+    radius=1,
+    start_radians=pi,
+    end_radians=pi,
+    n=200
+){
+  start_radians <- start_radians %% (2*pi)
+  end_radians <- end_radians %% (2*pi)
+  if(start_radians!=end_radians){ #not a full circle
+    if(start_radians > end_radians){
+      n <- round( n*((2*pi)+end_radians-start_radians)/(2*pi))
+      s <- seq(start_radians,(2*pi)+end_radians,length.out=n) %% (2*pi)
+    } else {
+      n <- n * ((end_radians-start_radians)/(2*pi))
+      s <- seq(start_radians,end_radians,length.out=n) %% (2*pi)
+    }
+  } else { #full circle
+    n <- round(n)+1
+    s <- seq(start_radians,start_radians+(2*pi),length.out=n) %% (2*pi)
   }
-  
-  #dev.off()
-  par(mar=c(5,5,2,2))
-  
-  null_plot(
-    x=dp$s1,
-    y=dp$s2,
-    xlab=seq1descript,
-    ylab=seq2descript
+  matrix(
+    c(x+radius*sin(s),y+radius*cos(s)),
+    ncol=length(s),
+    byrow=T
   )
+}
+
+circle_seg_dt <- function(x=0,y=0,radius=1,start_radians=pi,end_radians=pi,n=200){
+  d <- circle_seg(x=x,y=y,radius=radius,start_radians=start_radians,end_radians=end_radians,n=n)
+  data.table(
+    x=d[1,],
+    y=d[2,]
+  )
+}
+
+translate <- function(m,by_x=0,by_y=0){
+  T_ <- matrix(
+    c(
+      1,0,by_x,
+      0,1,by_y,
+      0,0,1
+    ),nrow=3,byrow=T
+  )
+  T_ %*% rbind(m,1) %>% `[`(1:2,)
+}
+
+rotate <- function(m,theta=pi){
+  R_ <- matrix(
+    c(
+      cos(-theta) , -sin(-theta),
+      sin(-theta)          , cos(-theta)
+    ),nrow=2,byrow=T
+  )
+  R_ %*% m
+}
+
+scale <- function(m,by_x,by_y){
+  S_ <- matrix(
+    c(
+      by_x , 0,
+      0    , by_y
+    ),nrow=2,byrow=T
+  )
+  S_ %*% m
+}
+
+reflect <- function(m,about_x=T,about_y=F){
+  S_ <- matrix(
+    c(
+      1 - 2*about_x , 0,
+      0    , 1 - 2*about_y
+    ),nrow=2,byrow=T
+  )
+  S_ %*% m
+}
+
+angle <- function(x1,y1,x2,y2){
+  x <- x2 - x1
+  y <- y2 - y1
+  l <- euc_dist(x1,x2,y1,y2)
+  ifelse(x<=0,2*pi - acos(y/l),acos(y/l))
+}
+
+filled_line <- function(x1,y1,x2,y2,n=200,ends=T){
+  m <- matrix(
+    c(seq(x1,x2,length.out=n),
+      seq(y1,y2,length.out=n)),
+    nrow=2,byrow=T
+  )
+  if(ends==T){
+    m
+  } else {
+    m[,2:(ncol(m)-1)]
+  }
+}
+
+rounded_line <- function(x1,y1,x2,y2,width,return_mat=F,n=200){
+  theta <- angle(x1,y1,x2,y2)
+  end1 <- circle_seg(0,0,radius=width/2,start_radians=pi*(1/2),end_radians=pi*(3/2),n=n)
+  end2 <- end1 %>% rotate(pi) %>% translate(by_y = euc_dist(x1,x2,y1,y2))
+  mid1 <- filled_line(last(t(end1))[,1],last(t(end1))[,2],first(t(end2))[,1] , first(t(end2))[,2], n=n, ends = F )
+  mid2 <- filled_line(last(t(end2))[,1],last(t(end2))[,2],first(t(end1))[,1] , first(t(end1))[,2], n=n, ends = F )
+  #ce("RLine, theta is: ",theta %>% round2dp)
+  shape <- cbind(
+    end1,
+    mid1,
+    end2,
+    mid2
+  ) %>%
+    rotate(theta) %>%
+    translate(x1,y1)
   
-  l_ply(seq(from=1,length.out=nrow(dp)/3,by=3),function(i){
-    lines(
-      x=dp[i:(i+2),s1],
-      y=dp[i:(i+2),s2],
-      col=dp[i:(i+2),c],
-      lwd=1
+  if(return_mat==TRUE){
+    shape
+  } else {
+    data.table(
+      x=shape[1,],
+      y=shape[2,]
+    )
+  }
+  
+}
+
+
+deg2rad <- function(x){
+  x*(360/(2*pi))
+}
+
+rad2deg <- function(x){
+  (x/360)*(2*pi)
+}
+
+lnPts <- function(x,y,size=1.0,theta=0.0,...){
+  l_ply(seq_along(x),function(i){
+    m <- matrix(c(0,-size/2,0,size/2),nrow=2L) %>% rotate(theta) %>% translate(x[i],y[i])
+    lines(m[1,],m[2,],...)
+  })
+}
+
+
+# Export to tim_functions
+seq_along_dt <- function(dt){
+  if(nrow(dt)>0){
+    return(1L:nrow(dt))
+  } else {
+    return(integer())
+  }
+}
+
+
+
+getSeqsFromFastas <- function(coordTable,outFile=NULL,stranded=T,bedToolsBin=system("which bedtools",intern=T)){
+  # As per bedtools_getfasta, but takes "normal" (blast-style) coords, separate files, and just updates the input table
+  b <- copy(coordTable)
+  b[,start:=start-1]
+  s <- "-s"
+  if(stranded==FALSE){s<-"";b[,strand:="+"]}
+  if(is.null(b$strand)){b[,strand:="+"]}
+  n <- ""
+  if(!is.null(b$name)){n <- "-name"} else {b[,name:=""]}
+  of <- ""
+  if(!is.null(outFile)){ of <- paste0(" >> ",outFile); if(file.exists(outFile)){unlink(outFile)} }
+  b[,seq:=NA_character_]
+  b[,idx:=1:.N]
+  out <- b[,seq:={
+    tf <- tempfile()
+    out <- .SD[,.(chr,start,end,name,score=".",strand)]
+    write.table(x = out,file=tf,sep = "\t",quote=F,row.names = F,col.names = F)
+    cmd <- paste0(bedToolsBin," getfasta ",s," ",n," -fi ",fastaFname," -bed ",tf,of)
+    fa <- system( cmd , intern = T )
+    unlink(tf)
+    fa[2]
+  },by=idx][,idx:=NULL][]
+  if(is.null(outFile)) {return(out)} else {invisible()}
+}
+
+
+
+
+allPairwiseAlignments <- function(seqTable,nCores=10){
+  sVsAll <- mclapply(mc.cores=nCores,seq_along_dt(seqTable),function(s_i){ # Take each in turn as a subject, and align all others to it
+    #dev s_i=1
+    lastz(
+      subjectLiteral = seqTable[s_i]$seq,
+      subjectLiteralName = seqTable[s_i]$name,
+      queryLiterals = seqTable$seq,
+      queryLiteralNames = seqTable$name
     )
   })
   
-  if(!is.null(annot1)){
-    fannot1 <- annot1[seqname==seq1 & feature=="exon" & ((end %between% range(dp$s1,na.rm=T)) | (start %between% range(dp$s1,na.rm=T))) ]
-    ce("Annotation for ",seq1)
-    print(fannot1)
-    if(!is.null(save_exons_to_file_seq1)){
-      write.csv(fannot1,save_exons_to_file_seq1,row.names=F)
-    }
-    
-    if (nrow(fannot1)>0){
-      
-      if(is.null(annot1$col)){
-        fannot1[,col:="#f02222"]
-      }
-      if(is.null(annot1$linecol)){
-        fannot1[,linecol:="#f0222211"]
-      }
-      
-      fannot1[,idx:=1:.N]
-      pannot1 <- fannot1[,{
-        data.table(
-          x=c(start,end,NA),
-          y=min(dp$s1,na.rm=T)+(0.02)*abs(diff(range(dp$s1,na.rm=T))),
-          c=col,
-          lc=linecol
-        )
-      },by="idx"]
-      pannot1[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
-      
-      l_ply(seq(from=1,length.out=nrow(pannot1)/3,by=3),function(i){
-        lines(
-          x=pannot1[i:(i+2),x],
-          y=pannot1[i:(i+2),y],
-          col=pannot1[i:(i+2),c],
-          lwd=4,
-          lend="butt"
-        )
-      })
-      
-      abline(
-        v=pannot1[!is.na(x),x],
-        col=pannot1[!is.na(x),lc],
-        lwd=.5
-      )
-    }
-  }
+  allAlns <- ldply(sVsAll,function(lastzResults){
+    lastzResults$aln
+  }) %>% setDT
   
-  if(!is.null(annot2)){
-    fannot2 <- annot2[seqname==seq2 & feature=="exon" & ((end %between% range(dp$s2,na.rm=T)) | (start %between% range(dp$s2,na.rm=T))) ]
-    ce("Annotation for ",seq2)
-    print(fannot2)
-    if(!is.null(save_exons_to_file_seq2)){
-      write.csv(fannot2,save_exons_to_file_seq2,row.names=F)
-    }
-    
-    if (nrow(fannot2)>0){
-      
-      if(is.null(annot2$col)){
-        fannot2[,col:="#f02222"]
-      }
-      if(is.null(annot2$linecol)){
-        fannot2[,linecol:="#f0222211"]
-      }
-      
-      fannot2[,idx:=1:.N]
-      pannot2 <- fannot2[,{
-        data.table(
-          y=c(start,end,NA),
-          x=min(dp$s2,na.rm=T)+(0.02)*abs(diff(range(dp$s2,na.rm=T))),
-          c=col,
-          lc=linecol
-        )
-      },by="idx"]
-      pannot2[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
-      
-      l_ply(seq(from=1,length.out=nrow(pannot2)/3,by=3),function(i){
-        lines(
-          x=pannot2[i:(i+2),x],
-          y=pannot2[i:(i+2),y],
-          col=pannot2[i:(i+2),c],
-          lwd=4,
-          lend="butt"
-        )
-      })
-      
-      abline(
-        h=pannot2[!is.na(x),y],
-        col=pannot2[!is.na(x),lc],
-        lwd=.5
-      )
-    }
-  }
+  dtMm <- lapply(sVsAll,function(sAlnList){
+    alns2dots(sAlnList$aln)
+  })
   
+  allDots <- ldply(dtMm,function(dm){
+    dm$dots
+  }) %>% setDT
   
+  allMismatches <- ldply(dtMm,function(dm){
+    dm$misMatches
+  }) %>% setDT
+  
+  list(alns=allAlns,dots=allDots,misMatches=allMismatches)
 }
-lastz <- get_lastz_dotplot
+
+
+alns2dots <- function(aln){
+  require(stringr)
+  # NOTE. alignment table from a lastz run, i.e., ONE subject, one or several queries
+  # dev aln <- sVsAll[[1]]$aln
+  aln[,alnId:=1:.N]
+  
+  # globalCoordTable <- data.table(
+  #   sPos=1:aln[1]$slength,
+  #   maxGapsAfter=0L
+  # ) %>% setkey(sPos)
+  # 
+  # Init output tables
+  dotsMmTables <- lapply(1:nrow(aln),function(i_a){
+    list(alnId=paste0("subject:",aln$sseqid[1],"_",i_a))
+  })
+  
+  l_ply(seq_along_dt(aln),function(i_a){
+    #dev i_a=2
+    sStart = aln[i_a]$sstart
+    sEnd   = aln[i_a]$send
+    qStart = aln[i_a]$qstart
+    qEnd   = aln[i_a]$qend
+    alnTable <- data.table(
+      ss = aln[i_a]$sAln %>% str_split_1(""),
+      qs = aln[i_a]$qAln %>% str_split_1("")
+    )
+    
+    # global coords for this subject
+    alnTable[,hasSgap:=ss=="-"]
+    alnTable[,hasAnyGap:=ss=="-"|qs=="-"]
+    alnTable[ss!="-",sPos:=sStart:sEnd]
+    if(aln[i_a,strand=="+"]){
+      alnTable[qs!="-",qPos:=qStart:qEnd]
+    } else {
+      alnTable[qs!="-",qPos:=qEnd:qStart]
+    }
+    alnTable[,sGapRun:=rleid(hasSgap)]
+    alnTable[,anyGapRun:=rleid(hasAnyGap)]
+    gapTable <- alnTable[,.(gapLengthAfter=.N,lastSpos=max(sPos)),by=.(sGapRun,hasSgap)][,.(hasSgap,gapLengthAfter,sPos=data.table::shift(lastSpos,1)+1)][hasSgap==T]
+    # globalCoordTable[gapTable,maxGapsAfter:=fifelse(gapLengthAfter>maxGapsAfter,gapLengthAfter,maxGapsAfter),on="sPos"]
+    
+    # dots
+    dotsMmTables[[i_a]]$dots <<- alnTable[hasAnyGap==F,
+                                          .SD[,.(
+                                            sseqid=aln[i_a]$sseqid,
+                                            qseqid=aln[i_a]$qseqid,
+                                            runPrIdent=(sum(ss==qs))/.N,
+                                            sPosFrom=sPos[1],
+                                            sPosTo=sPos[.N],
+                                            qPosFrom=qPos[1],
+                                            qPosTo=qPos[.N]
+                                          )] ,by=.(anyGapRun)][,anyGapRun:=NULL][]
+    
+    # mismatch table
+    dotsMmTables[[i_a]]$misMatches <<- alnTable[hasAnyGap==F & ss!=qs,.(
+      sseqid=aln[i_a]$sseqid,
+      qseqid=aln[i_a]$qseqid,
+      ss,
+      qs,
+      sPos,
+      qPos
+    )]
+    
+  })
+  
+  # establish global subject coords #DO WE EVER WANT THIS?
+  #globalCoordTable[,GsPos:=sPos+cumsum(maxGapsAfter)][,maxGapsAfter:=NULL]
+  
+  # now attach global coords to mm and dots objects
+  dots <- ldply(dotsMmTables,function(tbl){
+    #globalCoordTable[tbl$dots,on="sPos"][,alnId:=tbl$alnId][]
+    tbl$dots[,alnId:=tbl$alnId][]
+  }) %>% setDT
+  
+  misMatches <- ldply(dotsMmTables,function(tbl){
+    #globalCoordTable[tbl$misMatches,on="sPos"][,alnId:=tbl$alnId][]
+    tbl$misMatches[,alnId:=tbl$alnId][]
+  }) %>% setDT
+  
+  list(dots=dots,misMatches=misMatches)
+}
+
+
+
+readFasta <- function(fastaFname){
+  require(Biostrings)
+  t <- Biostrings::readDNAStringSet(fastaFname)
+  data.table(
+    seq = as.data.frame(t)$x,
+    name = t@ranges@NAMES,
+    length = t@ranges@width
+  )
+}
+
+
+printPairwiseAlignmentGrid <- function(pWalns,seqNames=NULL,targetName=NULL,colPallette="ag_GrnYl",colFun="sequential_hcl",lLwd=2,pCex=.2,tCex=.5,edge=0L){
+  # dev colPallette="ag_GrnYl"; colFun="sequential_hcl"; lLwd=2; pCex=1; tCex=.5
+  pWalns <- copy(pWalns)
+  if(is.null(pWalns$dots$col)){ pWalns$dots[,col:=replace_scale_with_colours(runPrIdent,palette=colPallette,fun=colFun)] }
+  if(is.null(pWalns$misMatches$col)){ pWalns$misMatches[,col:=swap(ss,c("A","T","G","C"),c("#d13824","#1f44cc","#199e24","#fcd705"))] }
+  # dev seqNames=NULL; targetName=NULL
+  if(is.null(seqNames)){ seqNames <- pWalns$alns[,unique(sseqid)] }
+  if(is.null(targetName)){ targetName <- pWalns$alns$sseqid[1] }
+  
+  nRows <- length(seqNames)
+  rowOrder  <- union(pWalns$alns[sseqid==targetName][order(-score),unique(qseqid)],seqNames)
+  rowRanges <- pWalns$alns[rowOrder,on="sseqid"][,.(width=diff(range(1,send))),by=.(sseqid)]
+  
+  # Set up plot
+  lMat <- matrix(1L:((2+nRows)**2L),nrow=nRows+2) %>% t %>% apply(2,rev)
+  
+  par(mar=c(0,0,0,0))
+  w <- rowRanges[,c(mean(width),width,mean(width))]
+  layout(mat=lMat,widths=w,heights=w %>% rev)
+  
+  for(r in 0:(nRows+1)){
+    for(c in 0:(nRows+1)){
+      if(r==0 | r==(nRows+1)){ #Edge of a row, legit col
+        if(c %between% c(1,nRows)){
+          null_plot(1:3,1:3,yaxt='n',xaxt='n',axes=F)
+          text(x=2,y=2,labels=rowRanges[c]$sseqid,cex=tCex,srt=45)
+        } else {
+          plot.new()
+        }
+      } else if (c==0 | c==(nRows+1)){
+        if(r %between% c(1,nRows)){
+          null_plot(1:3,1:3,yaxt='n',xaxt='n',axes=F)
+          text(x=2,y=2,labels=rowRanges[r]$sseqid,cex=tCex,srt=45)
+        } else {
+          plot.new()
+        }
+      } else {
+        # dev c=1;r=2
+        ce(r,":",c)
+        #wait()
+        dDat <- pWalns$dots[sseqid==rowRanges[c]$sseqid & qseqid==rowRanges[r]$sseqid]
+        xRange <- c(1,rowRanges[c]$width)
+        yRange <- c(1,rowRanges[r]$width)
+        null_plot(xRange,yRange,xaxt='n',yaxt='n')
+        if(r==1){ axis(side=1) }
+        if(c==1){ axis(side=2) }
+        abline(v=xRange+c(edge,-edge),lty=2)
+        abline(h=xRange+c(edge,-edge),lty=2)
+        l_ply(seq_along_dt(dDat),function(d_i){
+          lines(
+            # dev d_i = 1
+            x=dDat[d_i,c(sPosFrom,sPosTo)],
+            y=dDat[d_i,c(qPosFrom,qPosTo)],
+            col=dDat[d_i,rep(col,2)],
+            lwd=lLwd
+          )
+        })
+        mDat <- pWalns$misMatches[sseqid==rowRanges[c]$sseqid & qseqid==rowRanges[r]$sseqid]
+        points(
+          x=mDat$sPos,
+          y=mDat$qPos,
+          col=mDat$col,
+          cex=pCex,
+          pch=20
+        )
+      }
+    }
+  }
+}
+#
+
+# Overwrite, export me to tim funs later!
+findLocusByNtHomology <- function(baitSeqTable,evalueCutoff=Inf,topN=1,blastFn=blastn){
+  stopifnot(!is.null(baitSeqTable$baitSeq) & !is.null(baitSeqTable$refFastaFname) & !is.null(baitSeqTable$baitName))
+  baitSeqTable <- copy(baitSeqTable)
+  baitSeqTable[,{
+    bl <- blastFn(ref=refFastaFname,stringQueries=baitSeq,stringQueryNames=baitName)
+    #browser()
+    if(nrow(bl)==0){
+      NULL
+    } else {
+      bl[evalue<=evalueCutoff,.SD[order(evalue)][seq_along(1:min(.N,topN))][,.(sseqid=as.character(sseqid),sstart=as.integer(sstart),send=as.integer(send))],by=.(qseqid=as.character(qseqid))][,refFastaFname:=refFastaFname]
+    }
+  },by=.(refFastaFname)]
+}
+
+
+
+get_lastz_dotplot <- lastz
 alignmentPlot <- get_lastz_dotplot
 
 
