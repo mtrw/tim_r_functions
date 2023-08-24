@@ -81,35 +81,43 @@ file_nopath_noext <- function(f,newPath="",newExt=""){
 kill <- rm
 calling.env <- parent.frame
 
-#run blastx get a table
-blastx <- function(
+
+
+
+#run blastn, get a table
+tblastx <- function(
     ref, #dev ref <- refFile
     query, #dev query <- qFile
     stringQueries=NULL,
     stringQueryNames=NULL,
-    blastxBinary=system("which blastx",intern=T),
+    tblastxBinary=system("which tblastx",intern=T),
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    moreArgs="",
     numThreads=4,
-    saveFile=NULL
+    saveFile=NULL,
+    withSeq=F
 ){
+  if(withSeq==TRUE){
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
+  }
   require(data.table)
-  if(!file.exists(paste0(ref,".pdb"))){
+  if(!file.exists(paste0(ref,".ndb"))){
     ce("Making mucleotide blastDB for ",ref)
-    mcmd <- paste0(makeBlastDbBinary," -dbtype 'prot' -in ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
     ce("\tRunning command: ",mcmd)
     system(mcmd)
   }
-  
   if(!is.null(stringQueries)){
-    query <- tempfile(fileext=".fastp")
+    query <- tempfile(fileext=".fasta")
     stopifnot(length(stringQueries)==length(stringQueryNames))
     l_ply(seq_along(stringQueries),function(i){
       write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
     })
   }
-  bcmd <- paste0(blastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
   bl <- fread(cmd = bcmd,col.names=outputColNames)
   if(!is.null(saveFile)){
@@ -117,34 +125,102 @@ blastx <- function(
   }
   if(!is.null(stringQueries)){
     unlink(query)
+  } else {
+    bl[,subjectFname:=ref][]
   }
   bl
 }
 
-#run blastx get a table
-tblastx <- function(
+#run blastx, get a table
+blastx <- function(
     ref, #dev ref <- refFile
     query, #dev query <- qFile
-    tblastxBinary=system("which tblastx",intern=T),
+    stringQueries=NULL,
+    stringQueryNames=NULL,
+    tblastxBinary=system("which blastx",intern=T),
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
     moreArgs="",
     numThreads=4,
-    saveFile=NULL
+    saveFile=NULL,
+    withSeq=F
 ){
+  if(withSeq==TRUE){
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
+  }
   require(data.table)
   if(!file.exists(paste0(ref,".ndb"))){
-    ce("Making nucleotide blastDB for ",ref)
+    ce("Making mucleotide blastDB for ",ref)
     mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
     ce("\tRunning command: ",mcmd)
     system(mcmd)
+  }
+  if(!is.null(stringQueries)){
+    query <- tempfile(fileext=".fasta")
+    stopifnot(length(stringQueries)==length(stringQueryNames))
+    l_ply(seq_along(stringQueries),function(i){
+      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
+    })
   }
   bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
   bl <- fread(cmd = bcmd,col.names=outputColNames)
   if(!is.null(saveFile)){
     write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  if(!is.null(stringQueries)){
+    unlink(query)
+  } else {
+    bl[,subjectFname:=ref][]
+  }
+  bl
+}
+
+#run tblastn, get a table
+tblastn <- function(
+    ref, #dev ref <- refFile
+    query, #dev query <- qFile
+    stringQueries=NULL,
+    stringQueryNames=NULL,
+    tblastxBinary=system("which tblastn",intern=T),
+    makeBlastDbBinary=system("which makeblastdb",intern=T),
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    moreArgs="",
+    numThreads=4,
+    saveFile=NULL,
+    withSeq=F
+){
+  if(withSeq==TRUE){
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
+  }
+  require(data.table)
+  if(!file.exists(paste0(ref,".ndb"))){
+    ce("Making mucleotide blastDB for ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
+    ce("\tRunning command: ",mcmd)
+    system(mcmd)
+  }
+  if(!is.null(stringQueries)){
+    query <- tempfile(fileext=".fasta")
+    stopifnot(length(stringQueries)==length(stringQueryNames))
+    l_ply(seq_along(stringQueries),function(i){
+      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
+    })
+  }
+  bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  ce("Running command: ",bcmd)
+  bl <- fread(cmd = bcmd,col.names=outputColNames)
+  if(!is.null(saveFile)){
+    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  if(!is.null(stringQueries)){
+    unlink(query)
+  } else {
+    bl[,subjectFname:=ref][]
   }
   bl
 }
@@ -162,8 +238,13 @@ blastn <- function(
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
     moreArgs="",
     numThreads=4,
-    saveFile=NULL
+    saveFile=NULL,
+    withSeq=F
 ){
+  if(withSeq==TRUE){
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
+  }
   require(data.table)
   if(!file.exists(paste0(ref,".ndb"))){
     ce("Making mucleotide blastDB for ",ref)
@@ -671,14 +752,15 @@ getSeqsFromFastas <- function(coordTable,outFile=NULL,stranded=T,bedToolsBin=sys
 
 
 
-allPairwiseAlignments <- function(seqTable,nCores=10){
+allPairwiseAlignments <- function(seqTable,nCores=10,...){
   sVsAll <- mclapply(mc.cores=nCores,seq_along_dt(seqTable),function(s_i){ # Take each in turn as a subject, and align all others to it
     #dev s_i=1
     lastz(
       subjectLiteral = seqTable[s_i]$seq,
       subjectLiteralName = seqTable[s_i]$name,
       queryLiterals = seqTable$seq,
-      queryLiteralNames = seqTable$name
+      queryLiteralNames = seqTable$name,
+      ...
     )
   })
   
@@ -804,11 +886,11 @@ printPairwiseAlignmentGrid <- function(pWalns,seqNames=NULL,targetName=NULL,colP
   if(is.null(pWalns$misMatches$col)){ pWalns$misMatches[,col:=swap(ss,c("A","T","G","C"),c("#d13824","#1f44cc","#199e24","#fcd705"))] }
   # dev seqNames=NULL; targetName=NULL
   if(is.null(seqNames)){ seqNames <- pWalns$alns[,unique(sseqid)] }
-  if(is.null(targetName)){ targetName <- pWalns$alns$sseqid[1] }
+  if(is.null(targetName)){ s <- pWalns$alns$sseqid[1] }
   
   nRows <- length(seqNames)
   rowOrder  <- union(pWalns$alns[sseqid==targetName][order(-score),unique(qseqid)],seqNames)
-  rowRanges <- pWalns$alns[rowOrder,on="sseqid"][,.(width=diff(range(1,send))),by=.(sseqid)]
+  rowRanges <- pWalns$alns[rowOrder,on="sseqid"][,.N,by=.(sseqid,slength)] #N isn't used, this is just aggregation
   
   # Set up plot
   lMat <- matrix(1L:((2+nRows)**2L),nrow=nRows+2) %>% t %>% apply(2,rev)
@@ -1317,7 +1399,7 @@ sample_df <- function(df,n=10,...){
 
 
 #random_matrix( 5 , 5 , symmetric = T, all_pos=F )
-random_matrix <- function(m,n=m,symmetric=F,all_pos=T){
+random_matrix <- function(m=10,n=m,symmetric=F,all_pos=T){
   if(all_pos){
     M <- matrix(runif(m*n),nrow=m)
   } else {
@@ -2158,3 +2240,43 @@ seqCmp <- function(seq1,seq2,range1=c(1,stri_length(seq1)),range2=c(1,stri_lengt
   StrDist(substr(seq1,start=range1[1],stop=range1[2]),substr(seq2,start=range2[1],stop=range2[2]),method="hamming") / (range1[2]-range1[1]+1)
 }
 #seqCmp(seq1="asdgasd",seq2="asjdhod",range1=c(1,3),range2=c(5,7))
+
+
+# N segregating sites in a snp matrix
+nSeg <- function(snpMat){
+  sum(apply(snpMat,2,function(c){nu(c)!=1}))
+}
+
+# Nucleotide diversity
+pi <- function(snpMat,ploidy=2){
+  dist(snpMat,method="manhattan") %>% `/`(ploidy) %>% mean(.)
+}
+
+# As it says, still gotta work out the beta dist approximation for p-vals. Requires a translation of the dist across p (x axis)
+tajimaD <- function(snpMat,ploidy=2){
+  n <- nrow(snpMat)
+  pi_ <- pi(snpMat,ploidy=ploidy)
+  S <-   nSeg(snpMat)
+  a1 <-  sum(1/(1:(n-1)))
+  a2 <-  sum(1/(1:(n-1))**2)
+  b1 <- (n+1)/(3*(n-1))
+  b2 <- (2*((n**2)+n+3)) / (9*n*(n-1))
+  c1 <- b1 - 1/a1
+  c2 <- b2 - ((n+2)/(a1*n)) + (a2/(a1**2))
+  e1 <- c1/a1
+  e2 <- c2/(a1**2 + a2)
+  d <- pi_ - S/a1
+  rtVARd <- sqrt( e1*S + e2*S*(S-1) )
+  D <- d/rtVARd
+  # COME BACK TO ME for approximate p-vals
+  # Dmin <- ((2/n)-(1/a1)) / sqrt(e2)
+  # Dmax <- if((n%%2)==0) {
+  #   ((n/(2*(n-1)))-(1/a1)) / sqrt(e2)
+  # } else {
+  #   (((n+1)/(2*n))-(1/a1)) / sqrt(e2)
+  # }
+  # alpha <- -(((1+(Dmin*Dmax))*Dmax)/(Dmax-Dmin))
+  # beta <-   ((1+(Dmin*Dmax))*Dmin)/(Dmax-Dmin)
+  # D
+}
+
