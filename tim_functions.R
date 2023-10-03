@@ -15,44 +15,22 @@ for(p in plist){
 # If s2 is NULL, will "multiple align" all s1s
 printAln <- function(s1,s2=NULL){
   w <- options()$width
-  if(!is.null(s2)){
-    for(i_Aln in 1:length(s1)){
-      l <- stri_length(s1[i_Aln])
-      cat("Alignment ",i_Aln,":\n")
-      for(i in seq(1,l,by=w)){ 
-        cat("[",i,"]","\n")
-        cat(substr(s1[i_Aln],i,min(i+w,l)),"\n")
-        for(j in i:min(i+w,l)){
-          if(substr(s1[i_Aln],j,j)==substr(s2[i_Aln],j,j)){
-            cat("|")
-          } else {
-            cat(" ")
-          }
+  l <- stri_length(s1[1])
+  for(i in seq(1,l,by=w)){
+    cat("[",i,"] \n")
+    for(i_Aln in 1:(length(s1)-1)){
+      cat(substr(s1[i_Aln],i,min(i+w,l)),"\n")
+      for(j in i:min(i+w,l)){
+        if(substr(s1[i_Aln],j,j)==substr(s1[i_Aln+1],j,j)){
+          cat("|")
+        } else {
+          cat(" ")
         }
-        cat("\n")
-        cat(substr(s2[i_Aln],i,min(i+w,l)),"\n")
-        cat("\n")
       }
-      cat("\n\n")  
+      cat("\n")
     }
-  } else {
-    l <- stri_length(s1[1])
-    for(i in seq(1,l,by=w)){
-      cat("[",i,"] \n")
-      for(i_Aln in 1:(length(s1)-1)){
-        cat(substr(s1[i_Aln],i,min(i+w,l)),"\n")
-        for(j in i:min(i+w,l)){
-          if(substr(s1[i_Aln],j,j)==substr(s1[i_Aln+1],j,j)){
-            cat("|")
-          } else {
-            cat(" ")
-          }
-        }
-        cat("\n")
-      }
-      cat(substr(s1[length(s1)],i,min(i+w,l)),"\n")
-      cat("\n\n")
-    }
+    cat(substr(s1[length(s1)],i,min(i+w,l)),"\n")
+    cat("\n\n")
   }
 }
 #printAln(c("aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta","aagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgtaaagtcgta"))
@@ -81,146 +59,70 @@ file_nopath_noext <- function(f,newPath="",newExt=""){
 kill <- rm
 calling.env <- parent.frame
 
-
-
-
-#run blastn, get a table
-tblastx <- function(
+#run blastx get a table
+blastx <- function(
     ref, #dev ref <- refFile
     query, #dev query <- qFile
     stringQueries=NULL,
     stringQueryNames=NULL,
+    blastxBinary=system("which blastx",intern=T),
+    makeBlastDbBinary=system("which makeblastdb",intern=T),
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    numThreads=4,
+    saveFile=NULL
+){
+  require(data.table)
+  if(!file.exists(paste0(ref,".pdb"))){
+    ce("Making mucleotide blastDB for ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'prot' -in ",ref)
+    ce("\tRunning command: ",mcmd)
+    system(mcmd)
+  }
+  
+  if(!is.null(stringQueries)){
+    query <- tempfile(fileext=".fastp")
+    stopifnot(length(stringQueries)==length(stringQueryNames))
+    l_ply(seq_along(stringQueries),function(i){
+      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
+    })
+  }
+  bcmd <- paste0(blastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  ce("Running command: ",bcmd)
+  bl <- fread(cmd = bcmd,col.names=outputColNames)
+  if(!is.null(saveFile)){
+    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  if(!is.null(stringQueries)){
+    unlink(query)
+  }
+  bl
+}
+
+#run blastx get a table
+tblastx <- function(
+    ref, #dev ref <- refFile
+    query, #dev query <- qFile
     tblastxBinary=system("which tblastx",intern=T),
     makeBlastDbBinary=system("which makeblastdb",intern=T),
     outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
     moreArgs="",
     numThreads=4,
-    saveFile=NULL,
-    withSeq=F
+    saveFile=NULL
 ){
-  if(withSeq==TRUE){
-    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
-    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
-  }
   require(data.table)
   if(!file.exists(paste0(ref,".ndb"))){
-    ce("Making mucleotide blastDB for ",ref)
+    ce("Making nucleotide blastDB for ",ref)
     mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
     ce("\tRunning command: ",mcmd)
     system(mcmd)
-  }
-  if(!is.null(stringQueries)){
-    query <- tempfile(fileext=".fasta")
-    stopifnot(length(stringQueries)==length(stringQueryNames))
-    l_ply(seq_along(stringQueries),function(i){
-      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
-    })
   }
   bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
   bl <- fread(cmd = bcmd,col.names=outputColNames)
   if(!is.null(saveFile)){
     write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
-  }
-  if(!is.null(stringQueries)){
-    unlink(query)
-  } else {
-    bl[,subjectFname:=ref][]
-  }
-  bl
-}
-
-#run blastx, get a table
-blastx <- function(
-    ref, #dev ref <- refFile
-    query, #dev query <- qFile
-    stringQueries=NULL,
-    stringQueryNames=NULL,
-    tblastxBinary=system("which blastx",intern=T),
-    makeBlastDbBinary=system("which makeblastdb",intern=T),
-    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
-    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
-    moreArgs="",
-    numThreads=4,
-    saveFile=NULL,
-    withSeq=F
-){
-  if(withSeq==TRUE){
-    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
-    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
-  }
-  require(data.table)
-  if(!file.exists(paste0(ref,".ndb"))){
-    ce("Making mucleotide blastDB for ",ref)
-    mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
-    ce("\tRunning command: ",mcmd)
-    system(mcmd)
-  }
-  if(!is.null(stringQueries)){
-    query <- tempfile(fileext=".fasta")
-    stopifnot(length(stringQueries)==length(stringQueryNames))
-    l_ply(seq_along(stringQueries),function(i){
-      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
-    })
-  }
-  bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
-  ce("Running command: ",bcmd)
-  bl <- fread(cmd = bcmd,col.names=outputColNames)
-  if(!is.null(saveFile)){
-    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
-  }
-  if(!is.null(stringQueries)){
-    unlink(query)
-  } else {
-    bl[,subjectFname:=ref][]
-  }
-  bl
-}
-
-#run tblastn, get a table
-tblastn <- function(
-    ref, #dev ref <- refFile
-    query, #dev query <- qFile
-    stringQueries=NULL,
-    stringQueryNames=NULL,
-    tblastxBinary=system("which tblastn",intern=T),
-    makeBlastDbBinary=system("which makeblastdb",intern=T),
-    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
-    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
-    moreArgs="",
-    numThreads=4,
-    saveFile=NULL,
-    withSeq=F
-){
-  if(withSeq==TRUE){
-    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
-    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
-  }
-  require(data.table)
-  if(!file.exists(paste0(ref,".ndb"))){
-    ce("Making mucleotide blastDB for ",ref)
-    mcmd <- paste0(makeBlastDbBinary," -dbtype 'nucl' -in ",ref)
-    ce("\tRunning command: ",mcmd)
-    system(mcmd)
-  }
-  if(!is.null(stringQueries)){
-    query <- tempfile(fileext=".fasta")
-    stopifnot(length(stringQueries)==length(stringQueryNames))
-    l_ply(seq_along(stringQueries),function(i){
-      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
-    })
-  }
-  bcmd <- paste0(tblastxBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
-  ce("Running command: ",bcmd)
-  bl <- fread(cmd = bcmd,col.names=outputColNames)
-  if(!is.null(saveFile)){
-    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
-  }
-  if(!is.null(stringQueries)){
-    unlink(query)
-  } else {
-    bl[,subjectFname:=ref][]
   }
   bl
 }
@@ -238,13 +140,8 @@ blastn <- function(
     outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
     moreArgs="",
     numThreads=4,
-    saveFile=NULL,
-    withSeq=F
+    saveFile=NULL
 ){
-  if(withSeq==TRUE){
-    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore sseq qseq"
-    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" , "sSeq" , "qSeq" )
-  }
   require(data.table)
   if(!file.exists(paste0(ref,".ndb"))){
     ce("Making mucleotide blastDB for ",ref)
@@ -267,8 +164,6 @@ blastn <- function(
   }
   if(!is.null(stringQueries)){
     unlink(query)
-  } else {
-    bl[,subjectFname:=ref][]
   }
   bl
 }
@@ -459,516 +354,229 @@ bottom <- function(x,propframe=0.9){
 }
 
 
-# Export to tim_functions
-lastz <- function(
+get_lastz_dotplot <- function(
     subjectFile=NULL,
     queryFile=NULL,
     subjectRange=NULL,
     queryRange=NULL,
     subjectSeq=NULL,
     querySeq=NULL,
-    queryLiterals=NULL,
-    subjectLiteral=NULL,
-    queryLiteralNames=NULL,
-    subjectLiteralName=NULL,
+    subjectAnnot=NULL,
+    queryAnnot=NULL,
     lastz_binary=system("which lastz",intern=T),
+    min_length_plot=0,
     save_alignments_to_file=NULL,
     save_dots_to_file=NULL,
-    args="--gfextend --nochain --gapped"
+    save_exons_to_file_subjectSeq=NULL,
+    save_exons_to_file_querySeq=NULL,
+    plot_from_file=NULL,
+    args="",
+    plot=T
 ){
   
-  tfo <- tempfile() #output (alignment)
-  tfd <- tempfile() #output (dotplot info)
-  
-  if(is.null(subjectLiteral)){
+  stopifnot(is.null(plot_from_file) | is.character(plot_from_file))
+  if(is.null(plot_from_file)){ #we need to make the alignments
+    
+    tfo <- tempfile() #output (alignment)
+    tfd <- tempfile() #output (dotplot info)
+    
     subjectFileCall <- subjectFile
     queryFileCall <- queryFile
+    
+    options(scipen = 999)
+    if(!is.null(subjectSeq)){
+      tf1 <- tempfile()
+      writeLines(subjectSeq,tf1)
+      subjectFileCall <- paste0(subjectFileCall,"[subset=",tf1)
+      if(!is.null(subjectRange)){
+        subjectFileCall <- paste0(subjectFileCall,",",round(subjectRange[1]),"..",round(subjectRange[2]))
+      }
+      subjectFileCall <- paste0(subjectFileCall,"]")
+    }
+    if(!is.null(querySeq)){
+      tf2 <- tempfile()
+      writeLines(querySeq,tf2)
+      queryFileCall <- paste0(queryFileCall,"[subset=",tf2)
+      if(!is.null(queryRange)){
+        queryFileCall <- paste0(queryFileCall,",",round(queryRange[1]),"..",round(queryRange[2]))
+      }
+      queryFileCall <- paste0(queryFileCall,"]")
+    }
+    
+    options(scipen = 0)
+    cmd <- paste0(lastz_binary," ",subjectFileCall," ",queryFileCall," ",args," --rdotplot+score=",tfd," > ",tfo)
+    #system(paste("cat",tf1))
+    #system(paste("cat",tf2))
+    ce("Running command: ",cmd)
+    system(cmd)
+    
+    if(!is.null(save_alignments_to_file)){
+      file.copy(tfo,save_alignments_to_file)
+      ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
+    }
+    
+    if(!is.null(save_dots_to_file)){
+      file.copy(tfd,save_dots_to_file)
+      ce("Dots saved as ",save_dots_to_file," in ",getwd())
+    }
+    
+    #browser()
+    
+    if(!is.null(subjectSeq)){ unlink(tf1) }
+    if(!is.null(querySeq)){ unlink(tf2) }
+    unlink(tfo)
+    dp <- fread(tfd,header=T,col.names=c("s1","s2","score"))
+    if(file.exists(tfd)) { unlink(tfd) }
   } else {
-    subjectFileCall <- tempfile(fileext=".fasta")
-    for(i in seq_along(subjectLiteralName)){
-      write(paste0(">",subjectLiteralName[i],"\n",subjectLiteral[i]),subjectFileCall,append=T)
-    }
-    queryFileCall <- tempfile(fileext=".fasta")
-    for(i in seq_along(queryLiterals)){
-      write(paste0(">",queryLiteralNames[i],"\n",queryLiterals[i]),queryFileCall,append=T)
-    }
+    tfd <- plot_from_file
+    dp <- fread(tfd,header=T,col.names=c("s1","s2","score"))
   }
-  
-  
-  options(scipen = 999)
-  if(!is.null(subjectSeq)){
-    tf1 <- tempfile()
-    writeLines(subjectSeq,tf1)
-    subjectFileCall <- paste0(subjectFileCall,"[subset=",tf1)
-    if(!is.null(subjectRange)){
-      subjectFileCall <- paste0(subjectFileCall,",",round(subjectRange[1]),"..",round(subjectRange[2]))
-    }
-    subjectFileCall <- paste0(subjectFileCall,"]")
-  }
-  if(!is.null(querySeq)){
-    tf2 <- tempfile()
-    writeLines(querySeq,tf2)
-    queryFileCall <- paste0(queryFileCall,"[subset=",tf2)
-    if(!is.null(queryRange)){
-      queryFileCall <- paste0(queryFileCall,",",round(queryRange[1]),"..",round(queryRange[2]))
-    }
-    queryFileCall <- paste0(queryFileCall,"]")
-  }
-  
-  options(scipen = 0)
-  cmd <- paste0(lastz_binary," ",subjectFileCall," ",queryFileCall," ",args," --format=general:name1,start1,end1,size1,name2,start2,end2,size2,strand2,score,cov%,id%,blastid%,text1,text2 --rdotplot+score=",tfd," > ",tfo)
-  ce("Running command: ",cmd)
-  system(cmd)
-  
-  if(!is.null(save_alignments_to_file)){
-    file.copy(tfo,save_alignments_to_file)
-    ce("Alignments saved as ",save_alignments_to_file," in ",getwd())
-  }
-  
-  if(!is.null(save_dots_to_file)){
-    file.copy(tfd,save_dots_to_file)
-    ce("Dots saved as ",save_dots_to_file," in ",getwd())
-  }
-  
-  if(!is.null(subjectSeq)){ unlink(tf1) }
-  if(!is.null(querySeq)){ unlink(tf2) }
-  
-  ap <- fread(tfo,header=T,col.names=c("sseqid","sstart","send","slength","qseqid","qstart","qend","qlength","strand","score","prCoverage","prIdGapless","prIdInclGaps","sAln","qAln"))
-  ap[,prCoverage:=sub("%","",prCoverage)%>%as.numeric%>%`/`(100)]
-  ap[,prIdGapless:=sub("%","",prIdGapless)%>%as.numeric%>%`/`(100)]
-  ap[,prIdInclGaps:=sub("%","",prIdInclGaps)%>%as.numeric%>%`/`(100)]
-  ap[,sstart:=sstart%>%as.numeric]
-  ap[,send:=send%>%as.numeric]
-  ap[,slength:=slength%>%as.numeric]
-  ap[,qstart:=qstart%>%as.numeric]
-  ap[,qend:=qend%>%as.numeric]
-  ap[,qlength:=qlength%>%as.numeric]
-  ap[,score:=score%>%as.integer]
-  ap[,prCoverage:=prCoverage%>%as.numeric]
-  ap[,prIdInclGaps:=prIdInclGaps%>%as.numeric]
-  
-  dp <- fread(tfd,header=T,col.names=c("spos","qpos","score"))
-  dp[,sseqid:=ap$sseqid[1]]
-  queryTbl <- data.table(qseqid=unique(ap$qseqid))[,idx:=0:(.N-1)][]
-  dp <- dp[,idx:=cumsum((score=="score") %>% na.replace(FALSE))][queryTbl,on="idx"][,idx:=NULL][][na.replace(score!="score",TRUE)][]
-  
-  if(file.exists(tfd)) { unlink(tfd) }
-  if(file.exists(tfo)) { unlink(tfo) }
   
   if(nrow(dp)==0){
     ce("No alignments detected ...")
-    ap <- data.table(sseqid=character(),sstart=numeric(),send=numeric(),slength=numeric(),qseqid=character(),qstart=numeric(),qend=numeric(),qlength=numeric(),strand=character(),score=integer(),prCoverage=numeric(),prIdGapless=numeric(),prIdInclGaps=numeric(),sAln=character(),qAln=character())
-    dp <- data.table(sseqid=character(),qseqid=character(),spos=numeric(),qpos=numeric(),score=integer())
+    return()
   }
   
-  list(aln=ap,dots=dp)
-}
-
-
-
-round2dp <- function(x){
-  round(x,digits = 2)
-}
-
-
-circle_seg <- function(
-    x=0,
-    y=0,
-    radius=1,
-    start_radians=pi,
-    end_radians=pi,
-    n=200
-){
-  start_radians <- start_radians %% (2*pi)
-  end_radians <- end_radians %% (2*pi)
-  if(start_radians!=end_radians){ #not a full circle
-    if(start_radians > end_radians){
-      n <- round( n*((2*pi)+end_radians-start_radians)/(2*pi))
-      s <- seq(start_radians,(2*pi)+end_radians,length.out=n) %% (2*pi)
-    } else {
-      n <- n * ((end_radians-start_radians)/(2*pi))
-      s <- seq(start_radians,end_radians,length.out=n) %% (2*pi)
+  suppressWarnings(dp[,s1:=as.numeric(s1)])
+  suppressWarnings(dp[,s2:=as.numeric(s2)])
+  dp[,idx:=(1:.N)%%3]
+  #dev dp <- dp[1:54]
+  abs(dp[idx==2,s1]-dp[idx==1,s1]) -> l1_
+  abs(dp[idx==2,s2]-dp[idx==1,s2]) -> l2_
+  dp[,l1:=rep(l1_,each=3)]
+  dp[,l2:=rep(l2_,each=3)]
+  dp[,l:=pmax(l1,l2)]
+  dp <- dp[l>=min_length_plot]
+  dp[l!=max(l) & idx!=0,c:=replace_scale_with_colours(-log(l))] #,fun="sequential_hcl",palette="Reds 3"
+  dp[l==max(l) & idx!=0,c:="#000000"]
+  
+  subjectSeqdescript <- paste0(subjectFile,"\n",subjectSeq," :: [ ",subjectRange[1]," .. ",subjectRange[2]," ]")
+  querySeqdescript <- paste0(queryFile,"\n",querySeq," :: [ ",queryRange[1]," .. ",queryRange[2]," ]")
+  
+  if(plot==F){
+    return()
+  }
+  
+  #dev.off()
+  par(mar=c(5,5,2,2))
+  
+  null_plot(
+    x=dp$s1,
+    y=dp$s2,
+    xlab=subjectSeqdescript,
+    ylab=querySeqdescript
+  )
+  
+  l_ply(seq(from=1,length.out=nrow(dp)/3,by=3),function(i){
+    lines(
+      x=dp[i:(i+2),s1],
+      y=dp[i:(i+2),s2],
+      col=dp[i:(i+2),c],
+      lwd=1
+    )
+  })
+  
+  if(!is.null(subjectAnnot)){
+    fsubjectAnnot <- subjectAnnot[seqname==subjectSeq & feature=="exon" & ((end %between% range(dp$s1,na.rm=T)) | (start %between% range(dp$s1,na.rm=T))) ]
+    ce("Annotation for ",subjectSeq)
+    print(fsubjectAnnot)
+    if(!is.null(save_exons_to_file_subjectSeq)){
+      write.csv(fsubjectAnnot,save_exons_to_file_subjectSeq,row.names=F)
     }
-  } else { #full circle
-    n <- round(n)+1
-    s <- seq(start_radians,start_radians+(2*pi),length.out=n) %% (2*pi)
-  }
-  matrix(
-    c(x+radius*sin(s),y+radius*cos(s)),
-    ncol=length(s),
-    byrow=T
-  )
-}
-
-circle_seg_dt <- function(x=0,y=0,radius=1,start_radians=pi,end_radians=pi,n=200){
-  d <- circle_seg(x=x,y=y,radius=radius,start_radians=start_radians,end_radians=end_radians,n=n)
-  data.table(
-    x=d[1,],
-    y=d[2,]
-  )
-}
-
-translate <- function(m,by_x=0,by_y=0){
-  T_ <- matrix(
-    c(
-      1,0,by_x,
-      0,1,by_y,
-      0,0,1
-    ),nrow=3,byrow=T
-  )
-  T_ %*% rbind(m,1) %>% `[`(1:2,)
-}
-
-rotate <- function(m,theta=pi){
-  R_ <- matrix(
-    c(
-      cos(-theta) , -sin(-theta),
-      sin(-theta)          , cos(-theta)
-    ),nrow=2,byrow=T
-  )
-  R_ %*% m
-}
-
-scale <- function(m,by_x,by_y){
-  S_ <- matrix(
-    c(
-      by_x , 0,
-      0    , by_y
-    ),nrow=2,byrow=T
-  )
-  S_ %*% m
-}
-
-reflect <- function(m,about_x=T,about_y=F){
-  S_ <- matrix(
-    c(
-      1 - 2*about_x , 0,
-      0    , 1 - 2*about_y
-    ),nrow=2,byrow=T
-  )
-  S_ %*% m
-}
-
-angle <- function(x1,y1,x2,y2){
-  x <- x2 - x1
-  y <- y2 - y1
-  l <- euc_dist(x1,x2,y1,y2)
-  ifelse(x<=0,2*pi - acos(y/l),acos(y/l))
-}
-
-filled_line <- function(x1,y1,x2,y2,n=200,ends=T){
-  m <- matrix(
-    c(seq(x1,x2,length.out=n),
-      seq(y1,y2,length.out=n)),
-    nrow=2,byrow=T
-  )
-  if(ends==T){
-    m
-  } else {
-    m[,2:(ncol(m)-1)]
-  }
-}
-
-rounded_line <- function(x1,y1,x2,y2,width,return_mat=F,n=200){
-  theta <- angle(x1,y1,x2,y2)
-  end1 <- circle_seg(0,0,radius=width/2,start_radians=pi*(1/2),end_radians=pi*(3/2),n=n)
-  end2 <- end1 %>% rotate(pi) %>% translate(by_y = euc_dist(x1,x2,y1,y2))
-  mid1 <- filled_line(last(t(end1))[,1],last(t(end1))[,2],first(t(end2))[,1] , first(t(end2))[,2], n=n, ends = F )
-  mid2 <- filled_line(last(t(end2))[,1],last(t(end2))[,2],first(t(end1))[,1] , first(t(end1))[,2], n=n, ends = F )
-  #ce("RLine, theta is: ",theta %>% round2dp)
-  shape <- cbind(
-    end1,
-    mid1,
-    end2,
-    mid2
-  ) %>%
-    rotate(theta) %>%
-    translate(x1,y1)
-  
-  if(return_mat==TRUE){
-    shape
-  } else {
-    data.table(
-      x=shape[1,],
-      y=shape[2,]
-    )
-  }
-  
-}
-
-
-deg2rad <- function(x){
-  x*(360/(2*pi))
-}
-
-rad2deg <- function(x){
-  (x/360)*(2*pi)
-}
-
-lnPts <- function(x,y,size=1.0,theta=0.0,...){
-  l_ply(seq_along(x),function(i){
-    m <- matrix(c(0,-size/2,0,size/2),nrow=2L) %>% rotate(theta) %>% translate(x[i],y[i])
-    lines(m[1,],m[2,],...)
-  })
-}
-
-
-# Export to tim_functions
-seq_along_dt <- function(dt){
-  if(nrow(dt)>0){
-    return(1L:nrow(dt))
-  } else {
-    return(integer())
-  }
-}
-
-
-
-getSeqsFromFastas <- function(coordTable,outFile=NULL,stranded=T,bedToolsBin=system("which bedtools",intern=T)){
-  # As per bedtools_getfasta, but takes "normal" (blast-style) coords, separate files, and just updates the input table
-  b <- copy(coordTable)
-  b[,start:=start-1]
-  s <- "-s"
-  if(stranded==FALSE){s<-"";b[,strand:="+"]}
-  if(is.null(b$strand)){b[,strand:="+"]}
-  n <- ""
-  if(!is.null(b$name)){n <- "-name"} else {b[,name:=""]}
-  of <- ""
-  if(!is.null(outFile)){ of <- paste0(" >> ",outFile); if(file.exists(outFile)){unlink(outFile)} }
-  b[,seq:=NA_character_]
-  b[,idx:=1:.N]
-  out <- b[,seq:={
-    tf <- tempfile()
-    out <- .SD[,.(chr,start,end,name,score=".",strand)]
-    write.table(x = out,file=tf,sep = "\t",quote=F,row.names = F,col.names = F)
-    cmd <- paste0(bedToolsBin," getfasta ",s," ",n," -fi ",fastaFname," -bed ",tf,of)
-    fa <- system( cmd , intern = T )
-    unlink(tf)
-    fa[2]
-  },by=idx][,idx:=NULL][]
-  if(is.null(outFile)) {return(out)} else {invisible()}
-}
-
-
-
-
-allPairwiseAlignments <- function(seqTable,nCores=10,...){
-  sVsAll <- mclapply(mc.cores=nCores,seq_along_dt(seqTable),function(s_i){ # Take each in turn as a subject, and align all others to it
-    #dev s_i=1
-    lastz(
-      subjectLiteral = seqTable[s_i]$seq,
-      subjectLiteralName = seqTable[s_i]$name,
-      queryLiterals = seqTable$seq,
-      queryLiteralNames = seqTable$name,
-      ...
-    )
-  })
-  
-  allAlns <- ldply(sVsAll,function(lastzResults){
-    lastzResults$aln
-  }) %>% setDT
-  
-  dtMm <- lapply(sVsAll,function(sAlnList){
-    alns2dots(sAlnList$aln)
-  })
-  
-  allDots <- ldply(dtMm,function(dm){
-    dm$dots
-  }) %>% setDT
-  
-  allMismatches <- ldply(dtMm,function(dm){
-    dm$misMatches
-  }) %>% setDT
-  
-  list(alns=allAlns,dots=allDots,misMatches=allMismatches)
-}
-
-
-alns2dots <- function(aln){
-  require(stringr)
-  # NOTE. alignment table from a lastz run, i.e., ONE subject, one or several queries
-  # dev aln <- sVsAll[[1]]$aln
-  aln[,alnId:=1:.N]
-  
-  # globalCoordTable <- data.table(
-  #   sPos=1:aln[1]$slength,
-  #   maxGapsAfter=0L
-  # ) %>% setkey(sPos)
-  # 
-  # Init output tables
-  dotsMmTables <- lapply(1:nrow(aln),function(i_a){
-    list(alnId=paste0("subject:",aln$sseqid[1],"_",i_a))
-  })
-  
-  l_ply(seq_along_dt(aln),function(i_a){
-    #dev i_a=2
-    sStart = aln[i_a]$sstart
-    sEnd   = aln[i_a]$send
-    qStart = aln[i_a]$qstart
-    qEnd   = aln[i_a]$qend
-    alnTable <- data.table(
-      ss = aln[i_a]$sAln %>% str_split_1(""),
-      qs = aln[i_a]$qAln %>% str_split_1("")
-    )
     
-    # global coords for this subject
-    alnTable[,hasSgap:=ss=="-"]
-    alnTable[,hasAnyGap:=ss=="-"|qs=="-"]
-    alnTable[ss!="-",sPos:=sStart:sEnd]
-    if(aln[i_a,strand=="+"]){
-      alnTable[qs!="-",qPos:=qStart:qEnd]
-    } else {
-      alnTable[qs!="-",qPos:=qEnd:qStart]
-    }
-    alnTable[,sGapRun:=rleid(hasSgap)]
-    alnTable[,anyGapRun:=rleid(hasAnyGap)]
-    gapTable <- alnTable[,.(gapLengthAfter=.N,lastSpos=max(sPos)),by=.(sGapRun,hasSgap)][,.(hasSgap,gapLengthAfter,sPos=data.table::shift(lastSpos,1)+1)][hasSgap==T]
-    # globalCoordTable[gapTable,maxGapsAfter:=fifelse(gapLengthAfter>maxGapsAfter,gapLengthAfter,maxGapsAfter),on="sPos"]
-    
-    # dots
-    dotsMmTables[[i_a]]$dots <<- alnTable[hasAnyGap==F,
-                                          .SD[,.(
-                                            sseqid=aln[i_a]$sseqid,
-                                            qseqid=aln[i_a]$qseqid,
-                                            runPrIdent=(sum(ss==qs))/.N,
-                                            sPosFrom=sPos[1],
-                                            sPosTo=sPos[.N],
-                                            qPosFrom=qPos[1],
-                                            qPosTo=qPos[.N]
-                                          )] ,by=.(anyGapRun)][,anyGapRun:=NULL][]
-    
-    # mismatch table
-    dotsMmTables[[i_a]]$misMatches <<- alnTable[hasAnyGap==F & ss!=qs,.(
-      sseqid=aln[i_a]$sseqid,
-      qseqid=aln[i_a]$qseqid,
-      ss,
-      qs,
-      sPos,
-      qPos
-    )]
-    
-  })
-  
-  # establish global subject coords #DO WE EVER WANT THIS?
-  #globalCoordTable[,GsPos:=sPos+cumsum(maxGapsAfter)][,maxGapsAfter:=NULL]
-  
-  # now attach global coords to mm and dots objects
-  dots <- ldply(dotsMmTables,function(tbl){
-    #globalCoordTable[tbl$dots,on="sPos"][,alnId:=tbl$alnId][]
-    tbl$dots[,alnId:=tbl$alnId][]
-  }) %>% setDT
-  
-  misMatches <- ldply(dotsMmTables,function(tbl){
-    #globalCoordTable[tbl$misMatches,on="sPos"][,alnId:=tbl$alnId][]
-    tbl$misMatches[,alnId:=tbl$alnId][]
-  }) %>% setDT
-  
-  list(dots=dots,misMatches=misMatches)
-}
-
-
-
-readFasta <- function(fastaFname){
-  require(Biostrings)
-  t <- Biostrings::readDNAStringSet(fastaFname)
-  data.table(
-    seq = as.data.frame(t)$x,
-    name = t@ranges@NAMES,
-    length = t@ranges@width
-  )
-}
-
-
-printPairwiseAlignmentGrid <- function(pWalns,seqNames=NULL,targetName=NULL,colPallette="ag_GrnYl",colFun="sequential_hcl",lLwd=2,pCex=.2,tCex=.5,edge=0L){
-  # dev colPallette="ag_GrnYl"; colFun="sequential_hcl"; lLwd=2; pCex=1; tCex=.5
-  pWalns <- copy(pWalns)
-  if(is.null(pWalns$dots$col)){ pWalns$dots[,col:=replace_scale_with_colours(runPrIdent,palette=colPallette,fun=colFun)] }
-  if(is.null(pWalns$misMatches$col)){ pWalns$misMatches[,col:=swap(ss,c("A","T","G","C"),c("#d13824","#1f44cc","#199e24","#fcd705"))] }
-  # dev seqNames=NULL; targetName=NULL
-  if(is.null(seqNames)){ seqNames <- pWalns$alns[,unique(sseqid)] }
-  if(is.null(targetName)){ s <- pWalns$alns$sseqid[1] }
-  
-  nRows <- length(seqNames)
-  rowOrder  <- union(pWalns$alns[sseqid==targetName][order(-score),unique(qseqid)],seqNames)
-  rowRanges <- pWalns$alns[rowOrder,on="sseqid"][,.N,by=.(sseqid,slength)] #N isn't used, this is just aggregation
-  
-  # Set up plot
-  lMat <- matrix(1L:((2+nRows)**2L),nrow=nRows+2) %>% t %>% apply(2,rev)
-  
-  par(mar=c(0,0,0,0))
-  w <- rowRanges[,c(mean(width),width,mean(width))]
-  layout(mat=lMat,widths=w,heights=w %>% rev)
-  
-  for(r in 0:(nRows+1)){
-    for(c in 0:(nRows+1)){
-      if(r==0 | r==(nRows+1)){ #Edge of a row, legit col
-        if(c %between% c(1,nRows)){
-          null_plot(1:3,1:3,yaxt='n',xaxt='n',axes=F)
-          text(x=2,y=2,labels=rowRanges[c]$sseqid,cex=tCex,srt=45)
-        } else {
-          plot.new()
-        }
-      } else if (c==0 | c==(nRows+1)){
-        if(r %between% c(1,nRows)){
-          null_plot(1:3,1:3,yaxt='n',xaxt='n',axes=F)
-          text(x=2,y=2,labels=rowRanges[r]$sseqid,cex=tCex,srt=45)
-        } else {
-          plot.new()
-        }
-      } else {
-        # dev c=1;r=2
-        ce(r,":",c)
-        #wait()
-        dDat <- pWalns$dots[sseqid==rowRanges[c]$sseqid & qseqid==rowRanges[r]$sseqid]
-        xRange <- c(1,rowRanges[c]$width)
-        yRange <- c(1,rowRanges[r]$width)
-        null_plot(xRange,yRange,xaxt='n',yaxt='n')
-        if(r==1){ axis(side=1) }
-        if(c==1){ axis(side=2) }
-        abline(v=xRange+c(edge,-edge),lty=2)
-        abline(h=xRange+c(edge,-edge),lty=2)
-        l_ply(seq_along_dt(dDat),function(d_i){
-          lines(
-            # dev d_i = 1
-            x=dDat[d_i,c(sPosFrom,sPosTo)],
-            y=dDat[d_i,c(qPosFrom,qPosTo)],
-            col=dDat[d_i,rep(col,2)],
-            lwd=lLwd
-          )
-        })
-        mDat <- pWalns$misMatches[sseqid==rowRanges[c]$sseqid & qseqid==rowRanges[r]$sseqid]
-        points(
-          x=mDat$sPos,
-          y=mDat$qPos,
-          col=mDat$col,
-          cex=pCex,
-          pch=20
-        )
+    if (nrow(fsubjectAnnot)>0){
+      
+      if(is.null(subjectAnnot$col)){
+        fsubjectAnnot[,col:="#f02222"]
       }
+      if(is.null(subjectAnnot$linecol)){
+        fsubjectAnnot[,linecol:="#f0222211"]
+      }
+      
+      fsubjectAnnot[,idx:=1:.N]
+      psubjectAnnot <- fsubjectAnnot[,{
+        data.table(
+          x=c(start,end,NA),
+          y=min(dp$s1,na.rm=T)+(0.02)*abs(diff(range(dp$s1,na.rm=T))),
+          c=col,
+          lc=linecol
+        )
+      },by="idx"]
+      psubjectAnnot[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
+      
+      l_ply(seq(from=1,length.out=nrow(psubjectAnnot)/3,by=3),function(i){
+        lines(
+          x=psubjectAnnot[i:(i+2),x],
+          y=psubjectAnnot[i:(i+2),y],
+          col=psubjectAnnot[i:(i+2),c],
+          lwd=4,
+          lend="butt"
+        )
+      })
+      
+      abline(
+        v=psubjectAnnot[!is.na(x),x],
+        col=psubjectAnnot[!is.na(x),lc],
+        lwd=.5
+      )
+    }
+  }
+  
+  if(!is.null(queryAnnot)){
+    fqueryAnnot <- queryAnnot[seqname==querySeq & feature=="exon" & ((end %between% range(dp$s2,na.rm=T)) | (start %between% range(dp$s2,na.rm=T))) ]
+    ce("Annotation for ",querySeq)
+    print(fqueryAnnot)
+    if(!is.null(save_exons_to_file_querySeq)){
+      write.csv(fqueryAnnot,save_exons_to_file_querySeq,row.names=F)
+    }
+    
+    if (nrow(fqueryAnnot)>0){
+      
+      if(is.null(queryAnnot$col)){
+        fqueryAnnot[,col:="#f02222"]
+      }
+      if(is.null(queryAnnot$linecol)){
+        fqueryAnnot[,linecol:="#f0222211"]
+      }
+      
+      fqueryAnnot[,idx:=1:.N]
+      pqueryAnnot <- fqueryAnnot[,{
+        data.table(
+          y=c(start,end,NA),
+          x=min(dp$s2,na.rm=T)+(0.02)*abs(diff(range(dp$s2,na.rm=T))),
+          c=col,
+          lc=linecol
+        )
+      },by="idx"]
+      pqueryAnnot[is.na(x),y:=NA][is.na(y),c:=NA][is.na(c),lc:=NA]
+      
+      l_ply(seq(from=1,length.out=nrow(pqueryAnnot)/3,by=3),function(i){
+        lines(
+          x=pqueryAnnot[i:(i+2),x],
+          y=pqueryAnnot[i:(i+2),y],
+          col=pqueryAnnot[i:(i+2),c],
+          lwd=4,
+          lend="butt"
+        )
+      })
+      
+      abline(
+        h=pqueryAnnot[!is.na(x),y],
+        col=pqueryAnnot[!is.na(x),lc],
+        lwd=.5
+      )
     }
   }
 }
-#
-
-# Overwrite, export me to tim funs later!
-findLocusByNtHomology <- function(baitSeqTable,evalueCutoff=Inf,topN=1,blastFn=blastn){
-  stopifnot(!is.null(baitSeqTable$baitSeq) & !is.null(baitSeqTable$refFastaFname) & !is.null(baitSeqTable$baitName))
-  baitSeqTable <- copy(baitSeqTable)
-  baitSeqTable[,{
-    bl <- blastFn(ref=refFastaFname,stringQueries=baitSeq,stringQueryNames=baitName)
-    #browser()
-    if(nrow(bl)==0){
-      NULL
-    } else {
-      bl[evalue<=evalueCutoff,.SD[order(evalue)][seq_along(1:min(.N,topN))][,.(sseqid=as.character(sseqid),sstart=as.integer(sstart),send=as.integer(send))],by=.(qseqid=as.character(qseqid))][,refFastaFname:=refFastaFname]
-    }
-  },by=.(refFastaFname)]
-}
-
-
-
-get_lastz_dotplot <- lastz
 alignmentPlot <- get_lastz_dotplot
+
+
+
+
+
+
+
+
 
 
 #from http://www.sthda.com/english/wiki/impressive-package-for-3d-and-4d-graph-r-software-and-data-visualization
@@ -1399,7 +1007,7 @@ sample_df <- function(df,n=10,...){
 
 
 #random_matrix( 5 , 5 , symmetric = T, all_pos=F )
-random_matrix <- function(m=10,n=m,symmetric=F,all_pos=T){
+random_matrix <- function(m,n=m,symmetric=F,all_pos=T){
   if(all_pos){
     M <- matrix(runif(m*n),nrow=m)
   } else {
@@ -1549,15 +1157,6 @@ u <- function(...){
 }
 #1:10 %prop_in% 5:15
 
-#a simple ggplot theme
-reduced_l <- theme(
-  axis.line = element_line(colour = "black"),
-  
-  panel.grid.major = element_line(linewidth=.1 , colour = "grey"),
-  panel.grid.minor = element_blank(),
-  panel.background = element_rect( fill = "transparent", colour = "black"),
-  strip.background = element_rect(fill = "transparent", colour = "black"),
-)
 
 wait <- function(message="Press [enter] to continue"){
   invisible(readline(prompt=message))
@@ -1911,19 +1510,19 @@ is_na_dist <-function(d){
 
 
 # Utility plot funs for swAlign
-plotInit <- function( seq1 , seq2 ){
-  l1 <- length(seq1)
-  l2 <- length(seq2)
+plotInit <- function( subjectSeq , querySeq ){
+  l1 <- length(subjectSeq)
+  l2 <- length(querySeq)
   null_plot(-1:(l1+1),-1:(l2+1),main="S-W alignment",xaxt='n',yaxt='n',bty='n')
   text(
     x=(1:l1)+0.5,
     y=rep(-0.5,l1),
-    labels=seq1,
+    labels=subjectSeq,
   )
   text(
     x=rep(-0.5,l2),
     y=(1:l2)+0.5,
-    labels=seq2,
+    labels=querySeq,
   )
   for(x in 0:l1){
     for(y in 0:l2){
@@ -1939,12 +1538,12 @@ plotInit <- function( seq1 , seq2 ){
   }
 }
 
-plotMatchCols <- function( seq1 , seq2 , matchCol = "#00008833" ){
-  l1 <- length(seq1)
-  l2 <- length(seq2)
+plotMatchCols <- function( subjectSeq , querySeq , matchCol = "#00008833" ){
+  l1 <- length(subjectSeq)
+  l2 <- length(querySeq)
   for(x in 1:l1){
     for(y in 1:l2){
-      if(seq1[x]==seq2[y]){
+      if(subjectSeq[x]==querySeq[y]){
         rect(
           xleft = x,
           xright = x+1,
@@ -1995,11 +1594,11 @@ plotAddArrow <- function( i , j , orient ){
 # )
 swAlign <- function(sequence_1="ACTG",sequence_2="AATCTG",gapPenalty=5L,match=matrix(nrow=4,ncol=4,c(5,-1,-2,-2,-1,5,-2,-2,-2,-2,8,-1,-2,-2,-1,8),byrow=T),plotSteps=F,printAlignment=T){
   
-  seq2 <- strsplit(sequence_2,s="") %>% unlist
-  seq1 <- strsplit(sequence_1,s="") %>% unlist
+  querySeq <- strsplit(sequence_2,s="") %>% unlist
+  subjectSeq <- strsplit(sequence_1,s="") %>% unlist
   
-  s1 <- as.integer(swap(seq1,c("A","T","C","G"),1:4))
-  s2 <- as.integer(swap(seq2,c("A","T","C","G"),1:4))
+  s1 <- as.integer(swap(subjectSeq,c("A","T","C","G"),1:4))
+  s2 <- as.integer(swap(querySeq,c("A","T","C","G"),1:4))
   l1 <- length(s1)
   l2 <- length(s2)
   topScore <- 0L
@@ -2010,10 +1609,10 @@ swAlign <- function(sequence_1="ACTG",sequence_2="AATCTG",gapPenalty=5L,match=ma
   
   if(plotSteps==T){
     wait("Press any key to print grid ... ")
-    plotInit( seq1 , seq2 )
+    plotInit( subjectSeq , querySeq )
     
     wait("Press any key to show matches ... ")
-    plotMatchCols( seq1 , seq2 )
+    plotMatchCols( subjectSeq , querySeq )
   }
   
   #Initialise
@@ -2088,15 +1687,15 @@ swAlign <- function(sequence_1="ACTG",sequence_2="AATCTG",gapPenalty=5L,match=ma
     if( traceMat[topScoreI,topScoreJ] == 0 ){
       topScoreI <- topScoreI-1
       topScoreJ <- topScoreJ-1
-      alignMat[1,alnLength] <- seq1[topScoreI]
-      alignMat[2,alnLength] <- seq2[topScoreJ]
+      alignMat[1,alnLength] <- subjectSeq[topScoreI]
+      alignMat[2,alnLength] <- querySeq[topScoreJ]
     } else if ( traceMat[topScoreI,topScoreJ] == -1 ) {
       topScoreI <- topScoreI-1
       alignMat[1,alnLength] <- "-"
-      alignMat[2,alnLength] <- seq2[topScoreJ]
+      alignMat[2,alnLength] <- querySeq[topScoreJ]
     } else {
       topScoreJ <- topScoreJ-1
-      alignMat[1,alnLength] <- seq1[topScoreI]
+      alignMat[1,alnLength] <- subjectSeq[topScoreI]
       alignMat[2,alnLength] <- "-"
     }
     topScore  <- scoreMat[topScoreI,topScoreJ]
@@ -2117,8 +1716,8 @@ swAlign <- function(sequence_1="ACTG",sequence_2="AATCTG",gapPenalty=5L,match=ma
     gapPenalty=gapPenalty,
     scoreMat=scoreMat,
     traceMat=traceMat,
-    seq1=seq1,
-    seq2=seq2,
+    subjectSeq=subjectSeq,
+    querySeq=querySeq,
     alignment=alignMat
   )
 }
@@ -2213,7 +1812,7 @@ findLocusByNtHomology <- function(baitSeqTable,evalueCutoff=Inf){
 }
 
 
-
+printAln(c("asjdgasjdgavv","asjdgYsxdXaVv"))
 
 getVariantContextMSA <- function(variantPos,variantSurround,variantChr,refGenomeFname,targetGenomesFnames){
   # Varname
@@ -2235,48 +1834,8 @@ getVariantContextMSA <- function(variantPos,variantSurround,variantChr,refGenome
 
 
 # Normalised hamming
-seqCmp <- function(seq1,seq2,range1=c(1,stri_length(seq1)),range2=c(1,stri_length(seq2))){
+seqCmp <- function(subjectSeq,querySeq,subjectRange=c(1,stri_length(subjectSeq)),queryRange=c(1,stri_length(querySeq))){
   require(DescTools)
-  StrDist(substr(seq1,start=range1[1],stop=range1[2]),substr(seq2,start=range2[1],stop=range2[2]),method="hamming") / (range1[2]-range1[1]+1)
+  StrDist(substr(subjectSeq,start=subjectRange[1],stop=subjectRange[2]),substr(querySeq,start=queryRange[1],stop=queryRange[2]),method="hamming") / (subjectRange[2]-subjectRange[1]+1)
 }
-#seqCmp(seq1="asdgasd",seq2="asjdhod",range1=c(1,3),range2=c(5,7))
-
-
-# N segregating sites in a snp matrix
-nSeg <- function(snpMat){
-  sum(apply(snpMat,2,function(c){nu(c)!=1}))
-}
-
-# Nucleotide diversity
-pi <- function(snpMat,ploidy=2){
-  dist(snpMat,method="manhattan") %>% `/`(ploidy) %>% mean(.)
-}
-
-# As it says, still gotta work out the beta dist approximation for p-vals. Requires a translation of the dist across p (x axis)
-tajimaD <- function(snpMat,ploidy=2){
-  n <- nrow(snpMat)
-  pi_ <- pi(snpMat,ploidy=ploidy)
-  S <-   nSeg(snpMat)
-  a1 <-  sum(1/(1:(n-1)))
-  a2 <-  sum(1/(1:(n-1))**2)
-  b1 <- (n+1)/(3*(n-1))
-  b2 <- (2*((n**2)+n+3)) / (9*n*(n-1))
-  c1 <- b1 - 1/a1
-  c2 <- b2 - ((n+2)/(a1*n)) + (a2/(a1**2))
-  e1 <- c1/a1
-  e2 <- c2/(a1**2 + a2)
-  d <- pi_ - S/a1
-  rtVARd <- sqrt( e1*S + e2*S*(S-1) )
-  D <- d/rtVARd
-  # COME BACK TO ME for approximate p-vals
-  # Dmin <- ((2/n)-(1/a1)) / sqrt(e2)
-  # Dmax <- if((n%%2)==0) {
-  #   ((n/(2*(n-1)))-(1/a1)) / sqrt(e2)
-  # } else {
-  #   (((n+1)/(2*n))-(1/a1)) / sqrt(e2)
-  # }
-  # alpha <- -(((1+(Dmin*Dmax))*Dmax)/(Dmax-Dmin))
-  # beta <-   ((1+(Dmin*Dmax))*Dmin)/(Dmax-Dmin)
-  # D
-}
-
+#seqCmp(subjectSeq="asdgasd",querySeq="asjdhod",subjectRange=c(1,3),queryRange=c(5,7))
