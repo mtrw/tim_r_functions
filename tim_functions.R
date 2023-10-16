@@ -1,13 +1,23 @@
 
+#echo to the global environment. good warning messager. still doesn't work in mclappy, hashtag doh
+#ce("beans ",list("hello "," goodbye")," whatever")
+ce <- function(...){   cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
 
-plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")  
-for(p in plist){
-  if(! p %in% installed.packages()){
-    install.packages(p)
+ce("###################################################################################################")
+ce("Loading Tim's functions. These require various packages. to install many of them, you can run `install_load_Tims_packages()`. You should, they're all great packages, you want them anyway.")
+ce("###################################################################################################")
+
+
+install_load_Tims_packages <- function(){
+  plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")
+  for(p in plist){
+    if(! p %in% installed.packages()){
+      install.packages(p)
+    }
   }
-}
-for(p in plist){
-  require(p,character.only = T)
+  for(p in plist){
+    require(p,character.only = T)
+  }
 }
 
 # Give it strings in (e.g.) AAG-AT / A-GCAT format. s1[1] will align with s2[1], etc
@@ -363,6 +373,7 @@ get_lastz_dotplot <- function(
     querySeq=NULL,
     subjectAnnot=NULL,
     queryAnnot=NULL,
+    selfAlignment=F,
     lastz_binary=system("which lastz",intern=T),
     min_length_plot=0,
     save_alignments_to_file=NULL,
@@ -401,6 +412,12 @@ get_lastz_dotplot <- function(
         queryFileCall <- paste0(queryFileCall,",",round(queryRange[1]),"..",round(queryRange[2]))
       }
       queryFileCall <- paste0(queryFileCall,"]")
+    }
+    
+    if(selfAlignment==T){
+      ce("Message: Self-alignment requested. Any query info will be ignored. Do not provide the '--self' argument in `args`.")
+      args <- paste(args,"--self")
+      queryFileCall <- ""
     }
     
     options(scipen = 0)
@@ -1030,10 +1047,6 @@ midpoint <- function(x){
 SDs_from_mean <- function(x,SDs){
   mean(x) + SDs*sd(x,na.rm=T)
 }
-
-#echo to the global environment. good warning messager. still doesn't work in mclappy, hashtag doh
-#ce("beans ",list("hello "," goodbye")," whatever")
-ce <- function(...){   cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
 
 #distance to the nearest element of each element
 nearest_in_set <- function(x) {
@@ -1812,7 +1825,6 @@ findLocusByNtHomology <- function(baitSeqTable,evalueCutoff=Inf){
 }
 
 
-printAln(c("asjdgasjdgavv","asjdgYsxdXaVv"))
 
 getVariantContextMSA <- function(variantPos,variantSurround,variantChr,refGenomeFname,targetGenomesFnames){
   # Varname
