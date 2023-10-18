@@ -1,10 +1,10 @@
 
 #echo to the global environment. good warning messager. still doesn't work in mclappy, hashtag doh
 #ce("beans ",list("hello "," goodbye")," whatever")
-ce <- function(...){   cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
+ce <- function(...){ require(magrittr)  cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
 
 ce("###################################################################################################")
-ce("Loading Tim's functions. These require various packages. to install many of them, you can run `install_load_Tims_packages()`. You should, they're all great packages, you want them anyway.")
+ce("Loading Tim's functions. These require various packages. To install many of them, you can run `install_load_Tims_packages()`. You should, they're all great packages, you want them anyway.")
 ce("###################################################################################################")
 
 
@@ -167,6 +167,47 @@ blastn <- function(
     })
   }
   bcmd <- paste0(blastnBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
+  ce("Running command: ",bcmd)
+  bl <- fread(cmd = bcmd,col.names=outputColNames)
+  if(!is.null(saveFile)){
+    write.table(bl,saveFile,row.names=F,sep="\t",quote=F)
+  }
+  if(!is.null(stringQueries)){
+    unlink(query)
+  }
+  bl
+}
+
+
+#run blastp, get a table
+blastp <- function(
+    ref, #dev ref <- refFile
+    query, #dev query <- qFile
+    stringQueries=NULL,
+    stringQueryNames=NULL,
+    blastpBinary=system("which blastp",intern=T),
+    makeBlastDbBinary=system("which makeblastdb",intern=T),
+    outFmtArg="6 qaccver saccver slen qlen length qstart qend sstart send pident evalue bitscore",
+    outputColNames=c( "qseqid", "sseqid" , "slength" , "qlength" , "match_len" , "qstart" , "qend" , "sstart" , "send" , "pct_id" , "evalue" , "bitscore" ),
+    moreArgs="",
+    numThreads=4,
+    saveFile=NULL
+){
+  require(data.table)
+  if(!file.exists(paste0(ref,".pdb"))){
+    ce("Making mucleotide blastDB for ",ref)
+    mcmd <- paste0(makeBlastDbBinary," -dbtype 'prot' -in ",ref)
+    ce("\tRunning command: ",mcmd)
+    system(mcmd)
+  }
+  if(!is.null(stringQueries)){
+    query <- tempfile(fileext=".fasta")
+    stopifnot(length(stringQueries)==length(stringQueryNames))
+    l_ply(seq_along(stringQueries),function(i){
+      write(paste0(">",stringQueryNames[i],"\n",stringQueries[i]),file=query,append=T)
+    })
+  }
+  bcmd <- paste0(blastpBinary," -query ",query," -db ",ref," -num_threads ",numThreads," -outfmt '",outFmtArg,"' ",moreArgs)
   ce("Running command: ",bcmd)
   bl <- fread(cmd = bcmd,col.names=outputColNames)
   if(!is.null(saveFile)){
