@@ -1,7 +1,7 @@
 
 #echo to the global environment. good warning messager. still doesn't work in mclappy, hashtag doh
 #ce("beans ",list("hello "," goodbye")," whatever")
-ce <- function(...){ require(magrittr)  cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
+ce <- function(...){ require(magrittr);  cat(paste0(...,"\n"), sep='', file=stderr()) %>% eval(envir = globalenv() ) %>% invisible() }
 
 ce("###################################################################################################")
 ce("Loading Tim's functions. These require various packages. To install many of them, you can run `install_load_Tims_packages()`. You should, they're all great packages, you want them anyway.")
