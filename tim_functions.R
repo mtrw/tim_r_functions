@@ -180,7 +180,7 @@ blastn <- function(
 
 
 #run blastp, get a table
-blastp <- function(
+blastp <- function( 
     ref, #dev ref <- refFile
     query, #dev query <- qFile
     stringQueries=NULL,
