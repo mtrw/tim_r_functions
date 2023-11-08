@@ -9,7 +9,7 @@ ce("############################################################################
 
 
 install_load_Tims_packages <- function(){
-  plist <- c("data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")
+  plist <- c("kit","data.table","gtools","lme4","plot3D","ggplot2","parallel","plyr","dplyr","tsne","magrittr","Rcpp","colorspace","zoo","stringi","devtools","rmarkdown","ggspatial","rnaturalearth")
   for(p in plist){
     if(! p %in% installed.packages()){
       install.packages(p)
@@ -1165,11 +1165,14 @@ view_matrix <- function(mat,n=10){
 
 
 greplMulti <- function(patterns,strings,...){
-  do.call(`|`,lapply(patterns,function(p){
+  psum(lapply(patterns,function(p){
     grepl(p,strings,...)
-  }))
+  }))>0
 }
-#greplMulti(LETTERS,c("B","E"))
+#greplMulti(c("B","E","Z"),LETTERS)
+
+
+
 
 
 number_runs <- function(vec){
