@@ -862,11 +862,6 @@ Nstat <- function(x,n=50L){
   x[cumsum(x) > (sum(x) * (100-n)/100)][1]
 }
 
-#work it out an annotate it
-pgrep <- function(search,in_me){
-  sapply(search,function(x) in_me[grep(x,in_me)[1]] )
-}
-
 #display brewer palletes and remind yourself how to use them
 cs <- function(){
   library(colorspace)
@@ -963,6 +958,7 @@ pmean <- function(...){
   out/length(invecs)
 }
 pmean2 <- pmean #legacy reasons
+
 
 
 #read a gff3 format file
@@ -1168,6 +1164,12 @@ view_matrix <- function(mat,n=10){
 }
 
 
+greplMulti <- function(patterns,strings,...){
+  do.call(`|`,lapply(patterns,function(p){
+    grepl(p,strings,...)
+  }))
+}
+#greplMulti(LETTERS,c("B","E"))
 
 
 number_runs <- function(vec){
