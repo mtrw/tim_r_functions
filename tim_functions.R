@@ -729,8 +729,8 @@ plot_pca_snprelate <- function(pca=pca,col_size_table=data.table(sample.id=pca$s
 
 #give it "st" as AG or CT or AGT etc, must be sorted alphabetically.
 IUPAC <- function(st){
-  codes <- c(        "A", "G", "C", "T", "R" ,  "Y" ,  "S" ,  "W" ,  "K" ,  "M" ,  "B" ,   "D" ,   "H" ,   "V" )
-  names(codes) <- c( "A", "G", "C", "T", "AG" , "CT" , "CG" , "AT" , "GT" , "AC" , "CGT" , "AGT" , "ACT" , "ACG" )
+  codes <- c(        "A", "G", "C", "T", "R" ,  "Y" ,  "S" ,  "W" ,  "K" ,  "M" ,  "B" ,   "D" ,   "H" ,   "V" ,   "N" )
+  names(codes) <- c( "A", "G", "C", "T", "AG" , "CT" , "CG" , "AT" , "GT" , "AC" , "CGT" , "AGT" , "ACT" , "ACG" , "ACGT" )
   codes[st]
 }
 #IUPAC(c("AG","AGT","CT"))
