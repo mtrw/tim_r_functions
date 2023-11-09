@@ -664,7 +664,8 @@ scatter3D_fancy <- function(x, y, z, ... )
 
 #x <- sample.int(3,20,replace=T)
 
-most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out=NA,threshold_notmet_out=NA){
+
+most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NULL,na_wins_out=NA,threshold_notmet_out=NA){
   #browser()
   if(all(is.na(x))){
     return(as(NA,class(x)))
@@ -683,7 +684,11 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
     as(Ma,class(x))
   }
   else if (tbl[order(-tbl)][1]==tbl[order(-tbl)][2]){
-    as(draw_out,class(x))
+    if(is.null(draw_out)){
+      sort(c(names(tbl[order(-tbl)][1]),names(tbl[order(-tbl)][2])))[1]
+    } else {
+      as(draw_out,class(x))
+    }
   } else if (Ma=="NA"){
     as(na_wins_out,class(x))
   } else if (tbl[order(-tbl)][1]/sum(tbl) < threshold_prop){
@@ -692,6 +697,7 @@ most_common_thing <- function(x,threshold_prop=0,na.rm=T,draw_out=NA,na_wins_out
     as(Ma,class(x))
   }
 }
+#c(2,1,1,2) %>% most_common_thing()
 #most_common_thing(x=c("G",NA,"T"),draw_out = NA)
 #most_common_thing(x=c(1,1,1,2,2,2,3,3,NA,NA,NA,NA,NA),draw_out="DRAW!",na_wins_out="na was the most common",na.rm=T)
 
