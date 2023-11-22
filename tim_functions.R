@@ -882,7 +882,7 @@ grid_ply <- function(rows,cols,FUN) {
   lapply( rows , function(row) lapply(cols , function(col) {
     FUN(row,col)
   }) %>% unlist ) %>% unlist %>%
-    matrix(nrow=length(rows),dimnames=list(rows,cols))
+    matrix(nrow=length(rows),dimnames=list(rows,cols),byrow = T)
 }
 
 #apply a fun of two vars in every combo, and give the results as a matrix
@@ -891,7 +891,7 @@ mc_grid_ply <- function(rows,cols,FUN,cores=25,...) {
   mclapply( mc.cores=cores , rows , function(row) lapply(cols , function(col) {
     FUN(row,col)
   }) %>% unlist ) %>% unlist %>%
-    matrix(nrow=length(rows),dimnames=list(rows,cols))
+    matrix(nrow=length(rows),dimnames=list(rows,cols),byrow = T)
 }
 
 #scale a list of values to between two points, proportionally spaced as they were originally
